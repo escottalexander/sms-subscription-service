@@ -6,8 +6,11 @@ const stateModel = {
     return collection.insertOne({ key, value });
   },
   getSetting: async (key) => {
-    return (await collection.find({ key }).project({ value: 1 }).toArray())[0]
-      .value;
+    const setting = await collection.find({ key }).project({ value: 1 }).toArray();
+    if (setting && setting.length > 0) {
+        return setting[0].value;
+    }
+    return null;
   },
   updateSetting: (key, value) => {
     collection.updateOne({ key }, { $set: { value } });
