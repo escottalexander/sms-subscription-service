@@ -105,12 +105,18 @@ describe("decipherMessage", () => {
 
     it("should call removeCode when message is REMOVE CODE", async () => {
       const removeCodeStub = sinon.stub(stateModel, "removeCampaignCode");
+      const phoneNumberStub = sinon.stub(
+        phoneNumberModel,
+        "updateCampaignCode"
+      );
+      
       await logic.decipherMessage({
         Body: "REMOVE CODE TEST",
         From: "+1234567890",
       });
 
       expect(removeCodeStub.calledOnceWithExactly("TEST"));
+      expect(phoneNumberStub.calledOnceWithExactly("TEST", null));
       expect(sendStub.callCount).to.equal(1);
     });
 
