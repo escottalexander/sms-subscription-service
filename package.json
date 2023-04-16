@@ -1,0 +1,22 @@
+{
+  "name": "sms-subscription-service",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "mocha ./test --exit"
+  },
+  "author": "Elliott Alexander",
+  "license": "ISC",
+  "dependencies": {
+    "chai": "^4.3.7",
+    "express": "^4.18.2",
+    "libphonenumber-js": "^1.10.26",
+    "mocha": "^10.2.0",
+    "mongodb": "^5.2.0",
+    "sinon": "^15.0.3",
+    "twilio": "^4.10.0",
+    "winston": "^3.8.2"
+  }
+}
