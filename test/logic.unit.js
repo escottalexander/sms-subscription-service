@@ -142,7 +142,7 @@ describe("decipherMessage", () => {
       expect(sendStub.calledOnceWithExactly("+1234567890", "RUNNING"));
     });
 
-    it("should return RUNNING when message is STATUS", async () => {
+    it("should call shutDownProcess when message is SHUTDOWN", async () => {
       const shutDownStub = sinon.stub(logic, "shutDownProcess");
       await logic.decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" });
 
