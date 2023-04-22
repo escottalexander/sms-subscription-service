@@ -63,7 +63,7 @@ describe("decipherMessage", () => {
     });
 
     it("should call addAdmin when message is ADD ADMIN", async () => {
-      await logic.decipherMessage({
+      const response = await logic.decipherMessage({
         Body: "ADD ADMIN 9999999999",
         From: "+1234567890",
       });
@@ -74,22 +74,22 @@ describe("decipherMessage", () => {
           isAdmin: true,
         })
       );
-      expect(sendStub.callCount).to.equal(1);
+      expect(response).to.equal('Added \'9999999999\' as an admin.');
     });
 
     it("should call addCode when message is ADD CODE", async () => {
       const addCodeStub = sinon.stub(stateModel, "addCampaignCode");
-      await logic.decipherMessage({
+      const response = await logic.decipherMessage({
         Body: "ADD CODE TEST",
         From: "+1234567890",
       });
 
       expect(addCodeStub.calledOnceWithExactly("TEST"));
-      expect(sendStub.callCount).to.equal(1);
+      expect(response).to.equal('Successfully added code TEST');
     });
 
     it("should call removeAdmin when message is REMOVE ADMIN", async () => {
-      await logic.decipherMessage({
+      const response = await logic.decipherMessage({
         Body: "REMOVE ADMIN 9999999999",
         From: "+1234567890",
       });
@@ -100,7 +100,7 @@ describe("decipherMessage", () => {
           isAdmin: false,
         })
       );
-      expect(sendStub.callCount).to.equal(1);
+      expect(response).to.equal('Removed \'9999999999\' as an admin.');
     });
 
     it("should call removeCode when message is REMOVE CODE", async () => {
@@ -110,14 +110,14 @@ describe("decipherMessage", () => {
         "updateCampaignCode"
       );
       
-      await logic.decipherMessage({
+      const response = await logic.decipherMessage({
         Body: "REMOVE CODE TEST",
         From: "+1234567890",
       });
 
       expect(removeCodeStub.calledOnceWithExactly("TEST"));
       expect(phoneNumberStub.calledOnceWithExactly("TEST", null));
-      expect(sendStub.callCount).to.equal(1);
+      expect(response).to.equal('Successfully removed code TEST');
     });
 
     it("should call changeCampaignCode when message is CHANGE CODE", async () => {
@@ -126,27 +126,30 @@ describe("decipherMessage", () => {
         phoneNumberModel,
         "updateCampaignCode"
       );
-      await logic.decipherMessage({
+      const response = await logic.decipherMessage({
         Body: "CHANGE CODE TEST1 TEST2",
         From: "+1234567890",
       });
 
       expect(stateStub.calledOnceWithExactly("TEST1", "TEST2"));
       expect(phoneNumberStub.calledOnceWithExactly("TEST1", "TEST2"));
-      expect(sendStub.callCount).to.equal(1);
+      expect(response).to.equal('Successfully changed code TEST1 to TEST2');
     });
 
     it("should return RUNNING when message is STATUS", async () => {
-      await logic.decipherMessage({ Body: "STATUS", From: "+1234567890" });
+      const response = await logic.decipherMessage({ Body: "STATUS", From: "+1234567890" });
 
-      expect(sendStub.calledOnceWithExactly("+1234567890", "RUNNING"));
+      expect(response).to.equal("RUNNING");
     });
 
-    it("should call shutDownProcess when message is SHUTDOWN", async () => {
+    it("should call shutDownProcess when message is SHUTDOWN", (done) => {
       const shutDownStub = sinon.stub(logic, "shutDownProcess");
-      await logic.decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" });
-
-      expect(shutDownStub.callCount).to.equal(1);
+      logic.decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" }).then(() => {
+        setTimeout(() => {
+          expect(shutDownStub.callCount).to.equal(1);
+          done();
+        }, 1100);
+      });
     });
 
     it("should call sendCustomMessage when message is a CUSTOM $CODE", async () => {
@@ -202,7 +205,7 @@ describe("decipherMessage", () => {
       });
   
       it("should add phone number to database and send confirmation when sent valid campaign code", async () => {
-        await logic.decipherMessage({ Body: "LOC1", From: "+1234567890" });
+        await logic.decipherMessage({ Body: "SUBSCRIBE LOC1", From: "+1234567890" });
   
         expect(
           createStub.calledOnceWithExactly({
@@ -219,7 +222,7 @@ describe("decipherMessage", () => {
       });
   
       it("should send unrecognized code message when message is not valid", async () => {
-        await logic.decipherMessage({ Body: "INVALID", From: "+1234567890" });
+        await logic.decipherMessage({ Body: "SUBSCRIBE INVALID", From: "+1234567890" });
   
         expect(createStub.callCount).to.equal(0);
         expect(
@@ -241,7 +244,7 @@ describe("decipherMessage", () => {
       });
   
       it("should send message when sent valid message with same campaign code", async () => {
-        await logic.decipherMessage({ Body: "LOC2", From: "+1234567890" });
+        await logic.decipherMessage({ Body: "SUBSCRIBE LOC2", From: "+1234567890" });
   
         expect(createStub.callCount).to.equal(0);
         expect(
@@ -253,7 +256,7 @@ describe("decipherMessage", () => {
       });
   
       it("should send message to switch location code when already signed up for different location", async () => {
-        await logic.decipherMessage({ Body: "LOC1", From: "+1234567890" });
+        await logic.decipherMessage({ Body: "SUBSCRIBE LOC1", From: "+1234567890" });
   
         expect(createStub.callCount).to.equal(0);
         expect(
@@ -265,23 +268,18 @@ describe("decipherMessage", () => {
       });
   
       it("should remove phone number from database and send confirmation when message is STOP", async () => {
-        await logic.decipherMessage({ Body: "STOP", From: "+1234567890" });
+        const response = await logic.decipherMessage({ Body: "SUBSCRIBE STOP", From: "+1234567890" });
   
         expect(
           removeStub.calledOnceWithExactly({
             phoneNumber: "+1234567890",
           })
         );
-        expect(
-          sendStub.calledOnceWithExactly(
-            "+1234567890",
-            "Unsubscribe successful. You will no longer receive notifications."
-          )
-        );
+        expect(response).to.equal("Unsubscribe successful. You will no longer receive notifications.");
       });
   
       it("should send unrecognized code message when message is not valid", async () => {
-        await logic.decipherMessage({ Body: "INVALID", From: "+1234567890" });
+        await logic.decipherMessage({ Body: "SUBSCRIBE INVALID", From: "+1234567890" });
   
         expect(createStub.callCount).to.equal(0);
         expect(

@@ -1,4 +1,6 @@
 import express from "express";
+import Twilio from 'twilio';
+const { MessagingResponse } = Twilio.twiml;
 import bodyParser from "body-parser";
 import logic from "./lib/logic.js";
 import logger from "./lib/services/logger.js";
@@ -12,8 +14,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.post("/webhook", async (req, res) => {
   logger.info("Request received on /webhook: " + JSON.stringify(req.body));
-  await logic.decipherMessage(req.body);
-  res.sendStatus(200);
+  const response = await logic.decipherMessage(req.body);
+  const twimlRes = new MessagingResponse();
+  twimlRes.message(response);
+  res.type('text/xml').send(twimlRes.toString());
 });
 
 app.get("/status", async (req, res) => {
