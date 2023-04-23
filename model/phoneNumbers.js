@@ -2,16 +2,10 @@ import db from "../lib/services/mongodb.js";
 
 const collection = db.collection("phone-numbers");
 const phoneNumberModel = {
-  createOrUpdate: ({ phoneNumber, campaignCode, isAdmin = false }) => {
-    let updateObj;
-    // If campaign code is null then don't overwrite
-    if (!campaignCode) {
-      updateObj = { $set: { phoneNumber, isAdmin } };
-    } else {
-      updateObj = { $set: { phoneNumber, campaignCode, isAdmin } };
-    }
+  createOrUpdate: (params) => {
+    const updateObj = { $set: params };
     // Actually use upserts to make sure we don't have duplicates
-    return collection.updateOne({ phoneNumber }, updateObj, { upsert: true });
+    return collection.updateOne({ phoneNumber: params.phoneNumber }, updateObj, { upsert: true });
   },
   updateCampaignCode: (oldCode, newCode) => {
     return collection.updateMany(

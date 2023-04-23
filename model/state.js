@@ -2,7 +2,7 @@ import db from "../lib/services/mongodb.js";
 
 const collection = db.collection("state");
 const stateModel = {
-  createSetting: ({ key, value }) => {
+  createSetting: (key, value ) => {
     return collection.insertOne({ key, value });
   },
   getSetting: async (key) => {
@@ -13,7 +13,7 @@ const stateModel = {
     return null;
   },
   updateSetting: (key, value) => {
-    return collection.updateOne({ key }, { $set: { value } }, { upsert: true });
+    return collection.updateOne({ key }, { $set: { value } });
   },
   getCampaignCodes: async () => {
     return (
