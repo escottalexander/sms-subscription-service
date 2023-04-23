@@ -13,7 +13,7 @@ const stateModel = {
     return null;
   },
   updateSetting: (key, value) => {
-    collection.updateOne({ key }, { $set: { value } });
+    return collection.updateOne({ key }, { $set: { value } }, { upsert: true });
   },
   getCampaignCodes: async () => {
     return (

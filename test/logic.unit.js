@@ -181,6 +181,38 @@ describe("decipherMessage", () => {
       expect(sendStub.calledWith("+1234567890", "Hello world!"));
     });
 
+    it("should call stateModel.createSetting when message is SET MESSAGE and setting doesn't exist", async () => {
+      const getSettingStub = sinon.stub(stateModel, "getSetting");
+      getSettingStub.resolves(null);
+      const updateSettingStub = sinon.stub(stateModel, 'updateSetting');
+      const createSettingStub = sinon.stub(stateModel, 'createSetting');
+
+      const response = await logic.decipherMessage({
+        Body: "SET MESSAGE Hello world!",
+        From: "+1234567890",
+      });
+
+      expect(response).to.equal('Default message has been set');
+      expect(createSettingStub.calledOnceWithExactly("deliveryMessage", "Hello world!"));
+      expect(updateSettingStub.notCalled);
+    });
+
+    it("should call stateModel.updateSetting when message is SET MESSAGE and setting exists", async () => {
+      const getSettingStub = sinon.stub(stateModel, "getSetting");
+      getSettingStub.resolves('existing message');
+      const updateSettingStub = sinon.stub(stateModel, 'updateSetting');
+      const createSettingStub = sinon.stub(stateModel, 'createSetting');
+
+      const response = await logic.decipherMessage({
+        Body: "SET MESSAGE Hello world!",
+        From: "+1234567890",
+      });
+
+      expect(response).to.equal('Default message has been set');
+      expect(updateSettingStub.calledOnceWithExactly("deliveryMessage", "Hello world!"));
+      expect(createSettingStub.notCalled);
+    });
+
     it("should send message back to admin when message is not recognized", async () => {
       await logic.decipherMessage({
         Body: "NOTVALIDINSTRUCTION",

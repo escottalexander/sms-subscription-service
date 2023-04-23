@@ -21,3 +21,4 @@ For admin users these are the commands you can use:
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
 - `SUBSCRIBE %CODE OR STOP%` - An admin can prepend 'SUBSCRIBE' to a normal user command to subscribe or unsubscribe their own account
+- `SET MESSAGE %MESSAGE%` - Set the default message that is sent to subscribers 
