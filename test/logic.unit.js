@@ -34,6 +34,7 @@ describe("decipherMessage", () => {
       findByPhoneNumberStub.resolves({
         phoneNumber: "+1234567890",
         isAdmin: true,
+        isActive: true
       });
     });
 
@@ -56,7 +57,7 @@ describe("decipherMessage", () => {
           isAdmin: false,
         },
       ]);
-      await logic.decipherMessage({ Body: "LOC1", From: "+1234567890" });
+      await logic.decipherMessage({ Body: "SEND LOC1", From: "+1234567890" });
 
       expect(findAllStub.calledOnceWithExactly("LOC1"));
       expect(sendStub.callCount).to.equal(3);
@@ -72,6 +73,7 @@ describe("decipherMessage", () => {
         createStub.calledOnceWithExactly({
           phoneNumber: "+9999999999",
           isAdmin: true,
+          isActive: true
         })
       );
       expect(response).to.equal('Added \'9999999999\' as an admin.');
@@ -226,101 +228,6 @@ describe("decipherMessage", () => {
         )
       );
     });
-
-    describe("when a SUBSCRIBE message is received from an admin phone number that is not subscribed", () => {
-      beforeEach(() => {
-        getCampaignCodesStub.resolves(["LOC1", "LOC2"]);
-        findByPhoneNumberStub.resolves({
-          phoneNumber: "+1234567890",
-          isAdmin: true,
-        });
-      });
-  
-      it("should add phone number to database and send confirmation when sent valid campaign code", async () => {
-        await logic.decipherMessage({ Body: "SUBSCRIBE LOC1", From: "+1234567890" });
-  
-        expect(
-          createStub.calledOnceWithExactly({
-            phoneNumber: "+1234567890",
-            campaignCode: "LOC1",
-          })
-        );
-        expect(
-          sendStub.calledOnceWithExactly(
-            "+1234567890",
-            "You have been signed up to receive notifications. If at any point you want to stop receiving messages, text STOP"
-          )
-        );
-      });
-  
-      it("should send unrecognized code message when message is not valid", async () => {
-        await logic.decipherMessage({ Body: "SUBSCRIBE INVALID", From: "+1234567890" });
-  
-        expect(createStub.callCount).to.equal(0);
-        expect(
-          sendStub.calledOnceWithExactly(
-            `We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ${config.supportNumberHumanReadable} explaining the problem.`
-          )
-        );
-      });
-    });
-  
-    describe("when a SUBSCRIBE message is received from an admin phone number that is already subscribed", () => {
-      beforeEach(() => {
-        getCampaignCodesStub.resolves(["LOC1", "LOC2"]);
-        findByPhoneNumberStub.resolves({
-          phoneNumber: "+1234567890",
-          campaignCode: "LOC2",
-          isAdmin: true,
-        });
-      });
-  
-      it("should send message when sent valid message with same campaign code", async () => {
-        await logic.decipherMessage({ Body: "SUBSCRIBE LOC2", From: "+1234567890" });
-  
-        expect(createStub.callCount).to.equal(0);
-        expect(
-          sendStub.calledOnceWithExactly(
-            "+1234567890",
-            "You are already signed up to receive messages for this location. If you would like to stop receiving messages, send STOP."
-          )
-        );
-      });
-  
-      it("should send message to switch location code when already signed up for different location", async () => {
-        await logic.decipherMessage({ Body: "SUBSCRIBE LOC1", From: "+1234567890" });
-  
-        expect(createStub.callCount).to.equal(0);
-        expect(
-          sendStub.calledOnceWithExactly(
-            "+1234567890",
-            "You are currently signed up for LOC2. Text STOP if you would like to stop receiving messages for this delivery. Then you can send LOC1 to sign up for those delivery messages."
-          )
-        );
-      });
-  
-      it("should remove phone number from database and send confirmation when message is STOP", async () => {
-        const response = await logic.decipherMessage({ Body: "SUBSCRIBE STOP", From: "+1234567890" });
-  
-        expect(
-          removeStub.calledOnceWithExactly({
-            phoneNumber: "+1234567890",
-          })
-        );
-        expect(response).to.equal("Unsubscribe successful. You will no longer receive notifications.");
-      });
-  
-      it("should send unrecognized code message when message is not valid", async () => {
-        await logic.decipherMessage({ Body: "SUBSCRIBE INVALID", From: "+1234567890" });
-  
-        expect(createStub.callCount).to.equal(0);
-        expect(
-          sendStub.calledOnceWithExactly(
-            `We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ${config.supportNumberHumanReadable} explaining the problem.`
-          )
-        );
-      });
-    });
   });
 
   describe("when a message is received from a non-admin phone number that is not subscribed", () => {
@@ -367,28 +274,10 @@ describe("decipherMessage", () => {
       });
     });
 
-    it("should send message when sent valid message with same campaign code", async () => {
-      await logic.decipherMessage({ Body: "LOC2", From: "+14444444444" });
-
-      expect(createStub.callCount).to.equal(0);
-      expect(
-        sendStub.calledOnceWithExactly(
-          "+14444444444",
-          "You are already signed up to receive messages for this location. If you would like to stop receiving messages, send STOP."
-        )
-      );
-    });
-
-    it("should send message to switch location code when already signed up for different location", async () => {
+    it("should overwrite current assigned campaignCode when signed up for different code", async () => {
       await logic.decipherMessage({ Body: "LOC1", From: "+14444444444" });
 
-      expect(createStub.callCount).to.equal(0);
-      expect(
-        sendStub.calledOnceWithExactly(
-          "+14444444444",
-          "You are currently signed up for LOC2. Text STOP if you would like to stop receiving messages for this delivery. Then you can send LOC1 to sign up for those delivery messages."
-        )
-      );
+      expect(createStub.callCount).to.equal(1);
     });
 
     it("should remove phone number from database and send confirmation when message is STOP", async () => {
