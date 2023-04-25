@@ -34,7 +34,7 @@ describe("decipherMessage", () => {
       findByPhoneNumberStub.resolves({
         phoneNumber: "+1234567890",
         isAdmin: true,
-        isActive: true
+        isActive: true,
       });
     });
 
@@ -73,10 +73,10 @@ describe("decipherMessage", () => {
         createStub.calledOnceWithExactly({
           phoneNumber: "+9999999999",
           isAdmin: true,
-          isActive: true
+          isActive: true,
         })
       );
-      expect(response).to.equal('Added \'9999999999\' as an admin.');
+      expect(response).to.equal("Added '9999999999' as an admin.");
     });
 
     it("should call addCode when message is ADD CODE", async () => {
@@ -102,7 +102,7 @@ describe("decipherMessage", () => {
           isAdmin: false,
         })
       );
-      expect(response).to.equal('Removed \'9999999999\' as an admin.');
+      expect(response).to.equal("Removed '9999999999' as an admin.");
     });
 
     it("should call removeCode when message is REMOVE CODE", async () => {
@@ -111,7 +111,7 @@ describe("decipherMessage", () => {
         phoneNumberModel,
         "updateCampaignCode"
       );
-      
+
       const response = await logic.decipherMessage({
         Body: "REMOVE CODE TEST",
         From: "+1234567890",
@@ -139,19 +139,24 @@ describe("decipherMessage", () => {
     });
 
     it("should return RUNNING when message is STATUS", async () => {
-      const response = await logic.decipherMessage({ Body: "STATUS", From: "+1234567890" });
+      const response = await logic.decipherMessage({
+        Body: "STATUS",
+        From: "+1234567890",
+      });
 
       expect(response).to.equal("RUNNING");
     });
 
     it("should call shutDownProcess when message is SHUTDOWN", (done) => {
       const shutDownStub = sinon.stub(logic, "shutDownProcess");
-      logic.decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" }).then(() => {
-        setTimeout(() => {
-          expect(shutDownStub.callCount).to.equal(1);
-          done();
-        }, 1100);
-      });
+      logic
+        .decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" })
+        .then(() => {
+          setTimeout(() => {
+            expect(shutDownStub.callCount).to.equal(1);
+            done();
+          }, 1100);
+        });
     });
 
     it("should call sendCustomMessage when message is a CUSTOM $CODE", async () => {
@@ -186,32 +191,42 @@ describe("decipherMessage", () => {
     it("should call stateModel.createSetting when message is SET MESSAGE and setting doesn't exist", async () => {
       const getSettingStub = sinon.stub(stateModel, "getSetting");
       getSettingStub.resolves(null);
-      const updateSettingStub = sinon.stub(stateModel, 'updateSetting');
-      const createSettingStub = sinon.stub(stateModel, 'createSetting');
+      const updateSettingStub = sinon.stub(stateModel, "updateSetting");
+      const createSettingStub = sinon.stub(stateModel, "createSetting");
 
       const response = await logic.decipherMessage({
         Body: "SET MESSAGE Hello world!",
         From: "+1234567890",
       });
 
-      expect(response).to.equal('Default message has been set');
-      expect(createSettingStub.calledOnceWithExactly("deliveryMessage", "Hello world!"));
+      expect(response).to.equal("Default message has been set");
+      expect(
+        createSettingStub.calledOnceWithExactly(
+          "deliveryMessage",
+          "Hello world!"
+        )
+      );
       expect(updateSettingStub.notCalled);
     });
 
     it("should call stateModel.updateSetting when message is SET MESSAGE and setting exists", async () => {
       const getSettingStub = sinon.stub(stateModel, "getSetting");
-      getSettingStub.resolves('existing message');
-      const updateSettingStub = sinon.stub(stateModel, 'updateSetting');
-      const createSettingStub = sinon.stub(stateModel, 'createSetting');
+      getSettingStub.resolves("existing message");
+      const updateSettingStub = sinon.stub(stateModel, "updateSetting");
+      const createSettingStub = sinon.stub(stateModel, "createSetting");
 
       const response = await logic.decipherMessage({
         Body: "SET MESSAGE Hello world!",
         From: "+1234567890",
       });
 
-      expect(response).to.equal('Default message has been set');
-      expect(updateSettingStub.calledOnceWithExactly("deliveryMessage", "Hello world!"));
+      expect(response).to.equal("Default message has been set");
+      expect(
+        updateSettingStub.calledOnceWithExactly(
+          "deliveryMessage",
+          "Hello world!"
+        )
+      );
       expect(createSettingStub.notCalled);
     });
 
@@ -278,7 +293,6 @@ describe("decipherMessage", () => {
       await logic.decipherMessage({ Body: "LOC1", From: "+14444444444" });
 
       expect(createStub.callCount).to.equal(1);
-
     });
 
     it("should remove phone number from database and send confirmation when message is STOP", async () => {
