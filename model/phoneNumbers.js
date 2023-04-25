@@ -5,7 +5,11 @@ const phoneNumberModel = {
   createOrUpdate: (params) => {
     const updateObj = { $set: params };
     // Actually use upserts to make sure we don't have duplicates
-    return collection.updateOne({ phoneNumber: params.phoneNumber }, updateObj, { upsert: true });
+    return collection.updateOne(
+      { phoneNumber: params.phoneNumber },
+      updateObj,
+      { upsert: true }
+    );
   },
   updateCampaignCode: (oldCode, newCode) => {
     return collection.updateMany(
@@ -21,9 +25,9 @@ const phoneNumberModel = {
   },
   findAllByCode: ({ campaignCode }) => {
     if (campaignCode === "ALL") {
-      return collection.find({}).toArray();
+      return collection.find({ isActive: true }).toArray();
     }
-    return collection.find({ campaignCode }).toArray();
+    return collection.find({ campaignCode, isActive: true }).toArray();
   },
 };
 
