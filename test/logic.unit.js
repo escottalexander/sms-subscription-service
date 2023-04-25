@@ -87,7 +87,7 @@ describe("decipherMessage", () => {
       });
 
       expect(addCodeStub.calledOnceWithExactly("TEST"));
-      expect(response).to.equal('Successfully added code TEST');
+      expect(response).to.equal("Successfully added code 'TEST'");
     });
 
     it("should call removeAdmin when message is REMOVE ADMIN", async () => {
@@ -119,7 +119,7 @@ describe("decipherMessage", () => {
 
       expect(removeCodeStub.calledOnceWithExactly("TEST"));
       expect(phoneNumberStub.calledOnceWithExactly("TEST", null));
-      expect(response).to.equal('Successfully removed code TEST');
+      expect(response).to.equal("Successfully removed code 'TEST'");
     });
 
     it("should call changeCampaignCode when message is CHANGE CODE", async () => {
@@ -135,7 +135,7 @@ describe("decipherMessage", () => {
 
       expect(stateStub.calledOnceWithExactly("TEST1", "TEST2"));
       expect(phoneNumberStub.calledOnceWithExactly("TEST1", "TEST2"));
-      expect(response).to.equal('Successfully changed code TEST1 to TEST2');
+      expect(response).to.equal("Successfully changed code 'TEST1' to 'TEST2'");
     });
 
     it("should return RUNNING when message is STATUS", async () => {
@@ -278,6 +278,7 @@ describe("decipherMessage", () => {
       await logic.decipherMessage({ Body: "LOC1", From: "+14444444444" });
 
       expect(createStub.callCount).to.equal(1);
+
     });
 
     it("should remove phone number from database and send confirmation when message is STOP", async () => {

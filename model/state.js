@@ -6,7 +6,7 @@ const stateModel = {
     return collection.insertOne({ key, value });
   },
   getSetting: async (key) => {
-    const setting = await collection.find({ key }).project({ value: 1 }).toArray();
+    const setting = await collection.find({ key }).toArray();
     if (setting && setting.length > 0) {
         return setting[0].value;
     }
@@ -16,17 +16,20 @@ const stateModel = {
     return collection.updateOne({ key }, { $set: { value } });
   },
   getCampaignCodes: async () => {
-    return (
-      await collection
-        .find({ key: "campaignCodes" })
-        .project({ value: 1 })
-        .toArray()
-    )[0].value;
+    const codes = await collection
+    .find({ key: "campaignCodes" })
+    .project({ value: 1 })
+    .toArray();
+    if (codes && codes.length > 0) {
+      return codes[0].value;
+    }
+    return [];
   },
   addCampaignCode: async (code) => {
     return collection.updateOne(
       { key: "campaignCodes" },
-      { $addToSet: { value: code } }
+      { $addToSet: { value: code } },
+      { upsert: true }
     );
   },
   removeCampaignCode: async (code) => {

@@ -5,7 +5,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "mocha ./test --exit"
+    "test": "export NODE_ENV=test && mocha ./test --exit"
   },
   "author": "Elliott Alexander",
   "license": "ISC",
