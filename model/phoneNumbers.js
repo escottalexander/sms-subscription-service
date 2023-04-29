@@ -3,6 +3,9 @@ import db from "../lib/services/mongodb.js";
 const collection = db.collection("phone-numbers");
 const phoneNumberModel = {
   createOrUpdate: (params) => {
+    // Add last modified date to record
+    const now = new Date();
+    params.lastModified = now;
     const updateObj = { $set: params };
     // Actually use upserts to make sure we don't have duplicates
     return collection.updateOne(
@@ -12,9 +15,10 @@ const phoneNumberModel = {
     );
   },
   updateCampaignCode: (oldCode, newCode) => {
+    const now = new Date();
     return collection.updateMany(
       { campaignCode: oldCode },
-      { $set: { campaignCode: newCode } }
+      { $set: { campaignCode: newCode, lastModified: now } }
     );
   },
   remove: ({ phoneNumber }) => {
