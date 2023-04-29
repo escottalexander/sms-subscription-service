@@ -96,7 +96,9 @@ describe("Core Logic", () => {
     const message = { Body: "send test", From: admin.phoneNumber };
     const response = await logic.decipherMessage(message);
 
-    expect(response).to.equal(responses.SEND_CODE.replace("%CODE%", "TEST"));
+    expect(response).to.equal(
+      responses.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", 1)
+    );
     expect(
       sendStub.calledWithExactly(
         normalUser.phoneNumber,
@@ -112,7 +114,7 @@ describe("Core Logic", () => {
     };
     const response = await logic.decipherMessage(message);
 
-    expect(response).to.equal(responses.CUSTOM_MESSAGE);
+    expect(response).to.equal(responses.CUSTOM_MESSAGE.replace("%COUNT%", 1));
     expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
     expect(!sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
   });
@@ -124,7 +126,7 @@ describe("Core Logic", () => {
     };
     const response = await logic.decipherMessage(message);
 
-    expect(response).to.equal(responses.CUSTOM_MESSAGE);
+    expect(response).to.equal(responses.CUSTOM_MESSAGE.replace("%COUNT%", 2));
     expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
     expect(sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
   });
@@ -320,17 +322,27 @@ describe("Core Logic", () => {
     const stop = { Body: "stop", From: normalUser.phoneNumber };
     await logic.decipherMessage(stop);
 
-
     const adminMessage = { Body: "send test1", From: admin.phoneNumber };
     const adminResponse = await logic.decipherMessage(adminMessage);
 
-    expect(adminResponse).to.equal(responses.SEND_CODE.replace("%CODE%", "TEST1"));
-    expect(
-      sendStub.callCount
-    ).to.equal(0);
+    expect(adminResponse).to.equal(
+      responses.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", 0)
+    );
+    expect(sendStub.callCount).to.equal(0);
 
     const start = { Body: "start", From: normalUser.phoneNumber };
     await logic.decipherMessage(start);
+  });
+
+  it("should send error it throws unexpectedly", async () => {
+    sinon.stub(logic, "addCampaignCode").throws("Something went very wrong!");
+    const message = {
+      Body: "add code anything",
+      From: admin.phoneNumber,
+    };
+    const response = await logic.decipherMessage(message);
+
+    expect(response).to.equal(responses.ERROR);
   });
 
   describe("admin sending unknown or incomplete commands", () => {
