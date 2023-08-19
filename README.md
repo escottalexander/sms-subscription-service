@@ -1,4 +1,4 @@
-# sms-subscription-service
+# SMS Campaign Subscription Service
 This service uses Twilio to enable you to parse messages from subscribers and categorize them into buckets by the code they entered. Admins can then send a message directed towards users based on which code they entered.
 
 With this service you can:
@@ -22,3 +22,12 @@ For admin users, they can use these commands in addition:
 - `CUSTOM %CODE OR ALL% %MESSAGE%` - To send a custom message to either a specific campaign or use ALL to send to entire list.
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
+
+# Set up
+You will need:
+- MongoDB
+- Twilio account
+- Somewhere to host the project and expose the endpoints Twilio uses
+
+Steps:
+Copy the `config.example.js` file and rename to `config.js`. Adjust the settings in that file to match yoru Twilio account information, your Mongo connection URI, and your database name. You will probably want to update the default messages set up in `responses.js` to match your use case. Deploy the project to a server and run. Point Twilio to use your webhook endpoint when it recieves a SMS message to your Twilio phone number. That is all! Now you can manage the server and messaging through SMS using the commands above.
