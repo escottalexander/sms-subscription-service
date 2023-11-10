@@ -30,4 +30,4 @@ You will need:
 - Somewhere to host the project and expose the endpoints Twilio uses
 
 Steps:
-Copy the `config.example.js` file and rename to `config.js`. Adjust the settings in that file to match yoru Twilio account information, your Mongo connection URI, and your database name. You will probably want to update the default messages set up in `responses.js` to match your use case. Deploy the project to a server and run. Point Twilio to use your webhook endpoint when it recieves a SMS message to your Twilio phone number. That is all! Now you can manage the server and messaging through SMS using the commands above.
+Copy the `config.example.js` file and rename to `config.js`. Adjust the settings in that file to match your Twilio account information, your Mongo connection URI, and your database name. You will probably want to update the default messages set up in `responses.js` to match your use case. Deploy the project to a server and run. Point Twilio to use your webhook endpoint when it recieves a SMS message to your Twilio phone number. That is all! Now you can manage the server and messaging through SMS using the commands above.
