@@ -7,6 +7,10 @@ const phoneNumberModel = {
     const now = new Date();
     params.lastModified = now;
     const updateObj = { $set: params };
+    if (params.$inc) {
+      updateObj.$inc = params.$inc;
+      delete updateObj.$set.$inc;
+    }
     // Actually use upserts to make sure we don't have duplicates
     return collection.updateOne(
       { phoneNumber: params.phoneNumber },
@@ -50,11 +54,11 @@ const phoneNumberModel = {
   incrementSendCount: ({ phoneNumber, success }) => {
     const updateParams = { phoneNumber, lastSendAttempt: new Date() };
     if (success) {
-      updateParams.sentCount = { $inc: 1 };
+      updateParams.$inc = { sentCount: 1 };
       // Reset failed count because we only care if a number always fails
       updateParams.failedCount = 0;
     } else {
-      updateParams.failedCount = { $inc: 1 };
+      updateParams.$inc = { failedCount: 1 };
     }
     return phoneNumberModel.createOrUpdate(updateParams);
   },

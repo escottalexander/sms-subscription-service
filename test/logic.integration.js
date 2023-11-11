@@ -29,7 +29,7 @@ let sendStub;
 describe("Core Logic", () => {
   before(init);
   beforeEach(() => {
-    sendStub = sinon.stub(messenger, "send");
+    sendStub = sinon.stub(messenger, "send").returns(true);
   });
   afterEach(() => {
     sendStub.restore();
