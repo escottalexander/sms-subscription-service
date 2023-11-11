@@ -29,9 +29,34 @@ const phoneNumberModel = {
   },
   findAllByCode: ({ campaignCode }) => {
     if (campaignCode === "ALL") {
-      return collection.find({ isActive: true }).toArray();
+      return collection
+        .find({
+          isActive: true,
+          $or: [
+            { failedCount: { $lt: 3 } },
+            { failedCount: { $exists: false } },
+          ],
+        })
+        .toArray();
     }
-    return collection.find({ campaignCode, isActive: true }).toArray();
+    return collection
+      .find({
+        campaignCode,
+        isActive: true,
+        $or: [{ failedCount: { $lt: 3 } }, { failedCount: { $exists: false } }],
+      })
+      .toArray();
+  },
+  incrementSendCount: ({ phoneNumber, success }) => {
+    const updateParams = { phoneNumber, lastSendAttempt: new Date() };
+    if (success) {
+      updateParams.sentCount = { $inc: 1 };
+      // Reset failed count because we only care if a number always fails
+      updateParams.failedCount = 0;
+    } else {
+      updateParams.failedCount = { $inc: 1 };
+    }
+    return phoneNumberModel.createOrUpdate(updateParams);
   },
 };
 
