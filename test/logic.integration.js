@@ -335,7 +335,7 @@ describe("Core Logic", () => {
   });
 
   it("should send error it throws unexpectedly", async () => {
-    sinon.stub(logic, "addCampaignCode").throws("Something went very wrong!");
+    sinon.stub(logic, "addCampaignCode").throws({message:"Something went very wrong!"});
     const message = {
       Body: "add code anything",
       From: admin.phoneNumber,
