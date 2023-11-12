@@ -8,6 +8,7 @@ import stateModel from "../model/state.js";
 import phoneNumberModel from "../model/phoneNumbers.js";
 import messenger from "../lib/services/messenger.js";
 import responses from "../responses.js";
+import reportingModel from "../model/reporting.js";
 
 const admin = { phoneNumber: "+12345678910", isAdmin: true, isActive: true };
 const normalUser = {
@@ -19,10 +20,14 @@ const normalUser = {
 async function init() {
   // Drop all records in db
   db.collection("phone-numbers").drop();
+  db.collection("reporting-daily").drop();
   db.collection("state").drop();
 
   // Create an admin to test with
   await phoneNumberModel.createOrUpdate(admin);
+
+  // Stub out shutdown function so it doesn't stop the tests XD
+  sinon.stub(logic,"shutDownProcess").returns(true);
 }
 
 let sendStub;
@@ -35,7 +40,7 @@ describe("Core Logic", () => {
     sendStub.restore();
   });
 
-  it("should set a message when called by and admin with SET MESSAGE", async () => {
+  it("should set a message when called by an admin with SET MESSAGE", async () => {
     const message = {
       Body: "SET MESSAGE Hello world!",
       From: admin.phoneNumber,
@@ -345,7 +350,7 @@ describe("Core Logic", () => {
     expect(response).to.equal(responses.ERROR);
   });
 
-  describe("admin sending unknown or incomplete commands", () => {
+  describe("admin sending unknown or incomplete commands", function() {
     const badCommands = [
       "sup doge",
       "NOTACODE",
@@ -369,7 +374,7 @@ describe("Core Logic", () => {
     });
   });
 
-  describe("non-admin calling admin functions", () => {
+  describe("non-admin calling admin functions", function() {
     const validAdminCommands = [
       "send test1",
       "add admin (555)555-5555",
@@ -384,9 +389,9 @@ describe("Core Logic", () => {
     ];
     validAdminCommands.forEach(function (command) {
       it(`should return unknown message for '${command}' command`, async () => {
-        const message = { Body: command, From: normalUser.phoneNumber };
-        const response = await logic.decipherMessage(message);
-        expect(response).to.equal(responses.UNKNOWN);
+          const message = { Body: command, From: normalUser.phoneNumber };
+          const response = await logic.decipherMessage(message);
+          expect(response).to.equal(responses.UNKNOWN);        
       });
     });
   });

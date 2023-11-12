@@ -4,6 +4,7 @@ const { MessagingResponse } = Twilio.twiml;
 import bodyParser from "body-parser";
 import logic from "./lib/logic.js";
 import logger from "./lib/services/logger.js";
+import reportingModel from "./model/reporting.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -18,6 +19,11 @@ app.post("/webhook", async (req, res) => {
   const twimlRes = new MessagingResponse();
   twimlRes.message(response);
   res.type("text/xml").send(twimlRes.toString());
+  try {
+    reportingModel.incrementCount({ fieldName: 'responseCount' });
+  } catch (err) {
+    logger.error("Failed to increment response count", err.message);
+  }
 });
 
 app.get("/status", async (req, res) => {
