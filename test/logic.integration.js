@@ -8,7 +8,6 @@ import stateModel from "../model/state.js";
 import phoneNumberModel from "../model/phoneNumbers.js";
 import messenger from "../lib/services/messenger.js";
 import responses from "../responses.js";
-import reportingModel from "../model/reporting.js";
 
 const admin = { phoneNumber: "+12345678910", isAdmin: true, isActive: true };
 const normalUser = {
