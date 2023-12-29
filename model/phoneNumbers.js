@@ -3,35 +3,36 @@ import db from "../lib/services/mongodb.js";
 const collection = db.collection("phone-numbers");
 const phoneNumberModel = {
   createOrUpdate: (params) => {
+    const { entityId, phoneNumber, $inc } = params;
     // Add last modified date to record
     const now = new Date();
     params.lastModified = now;
     const updateObj = { $set: params };
-    if (params.$inc) {
-      updateObj.$inc = params.$inc;
+    if ($inc) {
+      updateObj.$inc = $inc;
       delete updateObj.$set.$inc;
     }
     // Actually use upserts to make sure we don't have duplicates
     return collection.updateOne(
-      { phoneNumber: params.phoneNumber },
+      { entityId, phoneNumber },
       updateObj,
       { upsert: true }
     );
   },
-  updateCampaignCode: (oldCode, newCode) => {
+  updateCampaignCode: (entityId, oldCode, newCode) => {
     const now = new Date();
     return collection.updateMany(
-      { campaignCode: oldCode },
+      { entityId, campaignCode: oldCode },
       { $set: { campaignCode: newCode, lastModified: now } }
     );
   },
-  remove: ({ phoneNumber }) => {
-    return collection.deleteOne({ phoneNumber });
+  remove: ({ entityId, phoneNumber }) => {
+    return collection.deleteOne({ entityId, phoneNumber });
   },
-  findByPhoneNumber: ({ phoneNumber }) => {
-    return collection.findOne({ phoneNumber });
+  findByPhoneNumber: ({ entityId, phoneNumber }) => {
+    return collection.findOne({ entityId, phoneNumber });
   },
-  findAllByCode: ({ campaignCode }) => {
+  findAllByCode: ({ entityId, campaignCode }) => {
     if (campaignCode === "ALL") {
       return collection
         .find({
@@ -45,14 +46,15 @@ const phoneNumberModel = {
     }
     return collection
       .find({
+        entityId,
         campaignCode,
         isActive: true,
         $or: [{ failedCount: { $lt: 3 } }, { failedCount: { $exists: false } }],
       })
       .toArray();
   },
-  incrementSendCount: ({ phoneNumber, success }) => {
-    const updateParams = { phoneNumber, lastSendAttempt: new Date() };
+  incrementSendCount: ({ entityId, phoneNumber, success }) => {
+    const updateParams = { entityId, phoneNumber, lastSendAttempt: new Date() };
     if (success) {
       updateParams.$inc = { sentCount: 1 };
       // Reset failed count because we only care if a number always fails
