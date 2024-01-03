@@ -24,6 +24,9 @@ const daily = db.collection("reporting-daily");
 
 const reportingModel = {
   createOrUpdate: (params) => {
+    if (!params.entityId) {
+      throw new Error("Must provide entityId");
+    }
     // Accept a date in the params but if it's not there, override with new Date
     if (!params.date) {
       params.date = new Date();
@@ -42,44 +45,49 @@ const reportingModel = {
 
     // Actually use upserts to make sure we don't have duplicates
     return daily.updateOne(
-      { date },
+      { entityId: params.entityId, date },
       updateObj,
       { upsert: true }
     );
   },
 
-  incrementCount: ({ campaignCode, fieldName }) => {
-    const updateParams = { $inc: { [`${fieldName}`]: 1 } };
+  incrementCount: ({ entityId, campaignCode, fieldName }) => {
+    const updateParams = { entityId, $inc: { [`${fieldName}`]: 1 } };
     if (campaignCode) {
       updateParams.$inc[`campaignCodes.${campaignCode}.${fieldName}`] = 1;
     }
     return reportingModel.createOrUpdate(updateParams);
   },
 
-  remove: ({ date }) => {
+  remove: ({ entityId, date }) => {
     return daily.deleteOne(
-      { date: normalizeDate(date) }
+      { entityId, date: normalizeDate(date) }
     );
   },
 
-  findByDateRange: ({ startDate, endDate }) => {
+  findByDateRange: ({ entityId, startDate, endDate }) => {
     const UTCStartDate = normalizeDate(startDate);
     const UTCEndDate = normalizeDate(endDate);
     return daily
       .find({
+        entityId,
         date: { $gte: UTCStartDate, $lte: UTCEndDate },
       })
       .toArray();
   },
 
-  aggregateByDateRange: ({ startDate, endDate }) => {
+  aggregateByDateRange: ({ entityId, startDate, endDate }) => {
     const UTCStartDate = normalizeDate(startDate);
     const UTCEndDate = normalizeDate(endDate);
+    const $match = {
+      date: { $gte: UTCStartDate, $lte: UTCEndDate },
+    };
+    if (entityId) {
+      $match.entityId = entityId;
+    }
     return daily.aggregate([
       {
-        $match: {
-          date: { $gte: UTCStartDate, $lte: UTCEndDate },
-        },
+        $match,
       },
       {
         $group: {

@@ -5,17 +5,23 @@ const expect = chai.expect;
 import db from "../lib/services/mongodb.js";
 import logic from "../lib/logic.js";
 import phoneNumberModel from "../model/phoneNumbers.js";
+import entityModel from "../model/entities.js";
 import messenger from "../lib/services/messenger.js";
 import reportingModel from "../model/reporting.js";
 
-const admin = { phoneNumber: "+12345678910", isAdmin: true, isActive: true };
+let entity;
+let entityId;
+
+const admin = { phoneNumber: "+12345678910", entityId: "00001", isAdmin: true, isActive: true };
 const normalUser = {
   phoneNumber: "+15555555555",
+  entityId: "00001",
   isAdmin: false,
   isActive: true,
 };
 const normalUser2 = {
     phoneNumber: "+16555555556",
+    entityId: "00001",
     isAdmin: false,
     isActive: true,
   };
@@ -23,12 +29,29 @@ const normalUser2 = {
 async function init() {
   sendStub = sinon.stub(messenger, "send").returns(true);
   // Drop all records in db
-  db.collection("phone-numbers").drop();
-  db.collection("reporting-daily").drop();
-  db.collection("state").drop();
+  try {
+    await db.collection("phone-numbers").drop();
+    await db.collection("reporting-daily").drop();
+    await db.collection("state").drop();
+    await db.collection("entities").drop();
+  } catch (err) {
+    console.log("No collections were dropped because they don't exist");
+  }
+  
 
   // Create an admin to test with
   await phoneNumberModel.createOrUpdate(admin);
+
+  await entityModel.createOrUpdate({
+    entityId: "00001",
+    accountPhoneNumber: "+17777777777",
+    defaultMessage: "This is the default message",
+    name: "Test Entity",
+    contactName: "Test Contact",
+    contactNumber: "+18888888888",
+  });
+  entity = await entityModel.findByPhoneNumber("+17777777777");
+  entityId = entity.entityId;
 }
 
 let sendStub;
@@ -40,10 +63,10 @@ describe("Reporting Tests", function() {
 
   it("should show each action in reports", async () => {
     const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber };
+      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
     };
     const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber };
+      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
     };
     // Setup
     await logic.decipherMessage(getAdminMessage("add code report"));
@@ -67,6 +90,7 @@ describe("Reporting Tests", function() {
     endDate.setHours(endDate.getHours() + 24);
 
     const reportArr = await reportingModel.findByDateRange({
+      entityId,
       startDate,
       endDate,
     });
@@ -102,10 +126,10 @@ describe("Reporting Tests", function() {
   it("should increment when they occur multiple times", async () => {
     
     const getMessage = (code, user) => {
-      return { Body: code, From: user.phoneNumber };
+      return { Body: code, From: user.phoneNumber, To: entity.accountPhoneNumber };
     };
     const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber };
+      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
     };
     // Setup
     await logic.decipherMessage(getAdminMessage("add code report"));
@@ -132,6 +156,7 @@ describe("Reporting Tests", function() {
     endDate.setHours(endDate.getHours() + 24);
 
     const reportArr = await reportingModel.findByDateRange({
+      entityId,
       startDate,
       endDate,
     });
@@ -170,10 +195,10 @@ describe("Reporting Tests", function() {
 
     const aDay = 24 * 60 * 60 * 1000;
     const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber };
+      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
     };
     const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber };
+      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
     };
     // Setup
     await logic.decipherMessage(getAdminMessage("add code report"));
@@ -215,6 +240,7 @@ describe("Reporting Tests", function() {
     endDate.setHours(endDate.getHours() + 48);
 
     const reportArr = await reportingModel.findByDateRange({
+      entityId,
       startDate,
       endDate,
     });
@@ -232,10 +258,10 @@ describe("Reporting Tests", function() {
 
     const aDay = 24 * 60 * 60 * 1000;
     const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber };
+      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
     };
     const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber };
+      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
     };
     // Setup
     await logic.decipherMessage(getAdminMessage("add code report"));
@@ -277,6 +303,7 @@ describe("Reporting Tests", function() {
     endDate.setHours(endDate.getHours() + 48);
 
     const reportArr = await reportingModel.aggregateByDateRange({
+      entityId,
       startDate,
       endDate,
     });

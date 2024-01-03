@@ -5,34 +5,56 @@ const expect = chai.expect;
 import db from "../lib/services/mongodb.js";
 import logic from "../lib/logic.js";
 import stateModel from "../model/state.js";
+import entityModel from "../model/entities.js";
 import phoneNumberModel from "../model/phoneNumbers.js";
 import messenger from "../lib/services/messenger.js";
 import responses from "../responses.js";
 
-const admin = { phoneNumber: "+12345678910", isAdmin: true, isActive: true };
+const admin = { phoneNumber: "+12345678910", entityId: "00001", isAdmin: true, isActive: true };
 const normalUser = {
   phoneNumber: "+15555555555",
+  entityId: "00001",
   isAdmin: true,
   isActive: true,
 };
+let entity;
+let entityId;
 
 async function init() {
   // Drop all records in db
-  db.collection("phone-numbers").drop();
-  db.collection("reporting-daily").drop();
-  db.collection("state").drop();
+  try {
+    await db.collection("phone-numbers").drop();
+    await db.collection("reporting-daily").drop();
+    await db.collection("state").drop();
+    await db.collection("entities").drop();
+  } catch (err) {
+    console.log("No collections to drop, continuing...");
+  }
+  
 
+  // Create an entity to test with
+  await entityModel.createOrUpdate({
+    entityId: "00001",
+    accountPhoneNumber: "+17777777777",
+    defaultMessage: "This is the default message",
+    name: "Test Entity",
+    contactName: "Test Contact",
+    contactNumber: "+18888888888",
+  });
+  entity = await entityModel.findByPhoneNumber("+17777777777");
+  entityId = entity.entityId;
   // Create an admin to test with
   await phoneNumberModel.createOrUpdate(admin);
 
   // Stub out shutdown function so it doesn't stop the tests XD
-  sinon.stub(logic,"shutDownProcess").returns(true);
+  sinon.stub(logic, "shutDownProcess").returns(true);
 }
 
 let sendStub;
 describe("Core Logic", () => {
   before(init);
   beforeEach(() => {
+    // Stub out text sending functions
     sendStub = sinon.stub(messenger, "send").returns(true);
   });
   afterEach(() => {
@@ -43,31 +65,44 @@ describe("Core Logic", () => {
     const message = {
       Body: "SET MESSAGE Hello world!",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
-    const setting = await stateModel.getSetting("deliveryMessage");
+    const setting = await entityModel.getDefaultMessage(entityId);
     expect(setting).to.equal("Hello world!");
     expect(response).to.equal(responses.SET_MESSAGE);
   });
 
   it("should add a code when it receives ADD CODE from admin", async () => {
-    const message = { Body: "add code test", From: admin.phoneNumber };
+    const message = {
+      Body: "add code test",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
-    const codes = await stateModel.getCampaignCodes();
+    const codes = await entityModel.getCampaignCodes(entityId);
     expect(codes.includes("TEST"));
     expect(response).to.equal(responses.ADD_CODE.replace("%CODE%", "TEST"));
   });
 
   it("should add multiple codes when it receives different codes with ADD CODE from admin", async () => {
-    const message1 = { Body: "add code test1", From: admin.phoneNumber };
+    const message1 = {
+      Body: "add code test1",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response1 = await logic.decipherMessage(message1);
 
-    const message2 = { Body: "add code test2", From: admin.phoneNumber };
+    const message2 = {
+      Body: "add code test2",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response2 = await logic.decipherMessage(message2);
 
-    const codes = await stateModel.getCampaignCodes();
+    const codes = await entityModel.getCampaignCodes(entityId);
     expect(codes.includes("TEST1"));
     expect(codes.includes("TEST2"));
     expect(response1).to.equal(responses.ADD_CODE.replace("%CODE%", "TEST1"));
@@ -75,29 +110,41 @@ describe("Core Logic", () => {
   });
 
   it("should add a subscriber when non-admin sends a code", async () => {
-    const message = { Body: "test", From: normalUser.phoneNumber };
+    const message = {
+      Body: "test",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const user = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
     expect(response).to.equal(responses.VALID_CAMPAIGN_CODE);
   });
 
   it("should add a subscriber when non-admin sends a code with extra whitespace", async () => {
-    const message = { Body: "test  ", From: normalUser.phoneNumber };
+    const message = {
+      Body: "test  ",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const user = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
     expect(response).to.equal(responses.VALID_CAMPAIGN_CODE);
   });
 
   it("should send a message to subscriber when SEND CODE is sent by admin", async () => {
-    const message = { Body: "send test", From: admin.phoneNumber };
+    const message = {
+      Body: "send test",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     expect(response).to.equal(
@@ -115,6 +162,7 @@ describe("Core Logic", () => {
     const message = {
       Body: "custom test Hello world!",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
@@ -127,6 +175,7 @@ describe("Core Logic", () => {
     const message = {
       Body: "custom all Hello world!",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
@@ -136,11 +185,15 @@ describe("Core Logic", () => {
   });
 
   it("should add an admin as a subscriber when they send a code", async () => {
-    const message = { Body: "test", From: admin.phoneNumber };
+    const message = {
+      Body: "test",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const adminUser = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: admin.phoneNumber,
+      entityId, phoneNumber: admin.phoneNumber,
     });
     expect(adminUser).to.exist;
     expect(adminUser.campaignCode).to.equal("TEST");
@@ -151,6 +204,7 @@ describe("Core Logic", () => {
     const message = {
       Body: "change code test changedtest",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
@@ -167,7 +221,7 @@ describe("Core Logic", () => {
 
     // Make sure it updated user with that code
     const user = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
     expect(user.campaignCode).to.equal("CHANGEDTEST");
@@ -177,6 +231,7 @@ describe("Core Logic", () => {
     const message = {
       Body: "remove code changedtest",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
@@ -189,7 +244,7 @@ describe("Core Logic", () => {
 
     // Make sure it updated user with that code
     const user = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
     expect(user.campaignCode).to.equal(null);
@@ -199,11 +254,12 @@ describe("Core Logic", () => {
     const message = {
       Body: "add admin (100) 003-1337",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
     const newAdmin = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: "+11000031337",
+      entityId, phoneNumber: "+11000031337",
     });
     expect(newAdmin).to.exist;
     expect(response).to.equal(
@@ -215,11 +271,12 @@ describe("Core Logic", () => {
     const message = {
       Body: "add admin (1X0) 0X3-1337",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
     const newAdmin = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: "+11000013117",
+      entityId, phoneNumber: "+11000013117",
     });
     expect(newAdmin).to.not.exist;
     expect(response).to.equal(
@@ -231,11 +288,12 @@ describe("Core Logic", () => {
     const message = {
       Body: "remove admin (100)003-1337",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
     const notAdmin = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: "+11000031337",
+      entityId, phoneNumber: "+11000031337",
     });
     expect(notAdmin).to.exist;
     expect(notAdmin.isAdmin).to.be.false;
@@ -248,6 +306,7 @@ describe("Core Logic", () => {
     const message = {
       Body: "remove admin (1X0)0X3-1337",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
@@ -257,25 +316,37 @@ describe("Core Logic", () => {
   });
 
   it("should return RUNNING when STATUS is called", async () => {
-    const message = { Body: "STATUS", From: admin.phoneNumber };
+    const message = {
+      Body: "STATUS",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     expect(response).to.equal(responses.STATUS);
   });
 
   it("should return message when SHUTDOWN is called", async () => {
-    const message = { Body: "SHUTDOWN", From: admin.phoneNumber };
+    const message = {
+      Body: "SHUTDOWN",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     expect(response).to.equal(responses.SHUTDOWN);
   });
 
   it("should set admin user to inactive when they send STOP", async () => {
-    const message = { Body: "STOP", From: admin.phoneNumber };
+    const message = {
+      Body: "STOP",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const adminUser = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: admin.phoneNumber,
+      entityId, phoneNumber: admin.phoneNumber,
     });
     expect(adminUser).to.exist;
     expect(adminUser.isAdmin).to.be.true;
@@ -284,11 +355,15 @@ describe("Core Logic", () => {
   });
 
   it("should set admin user to active when they send START", async () => {
-    const message = { Body: "START", From: admin.phoneNumber };
+    const message = {
+      Body: "START",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const adminUser = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: admin.phoneNumber,
+      entityId, phoneNumber: admin.phoneNumber,
     });
     expect(adminUser).to.exist;
     expect(adminUser.isAdmin).to.be.true;
@@ -297,11 +372,15 @@ describe("Core Logic", () => {
   });
 
   it("should set normal user to inactive when they send STOP", async () => {
-    const message = { Body: "STOP", From: normalUser.phoneNumber };
+    const message = {
+      Body: "STOP",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const normal = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(normal).to.exist;
     expect(normal.isActive).to.be.false;
@@ -309,11 +388,15 @@ describe("Core Logic", () => {
   });
 
   it("should set normal user to active when they send START", async () => {
-    const message = { Body: "START", From: normalUser.phoneNumber };
+    const message = {
+      Body: "START",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const response = await logic.decipherMessage(message);
 
     const normal = await phoneNumberModel.findByPhoneNumber({
-      phoneNumber: normalUser.phoneNumber,
+      entityId, phoneNumber: normalUser.phoneNumber,
     });
     expect(normal).to.exist;
     expect(normal.isActive).to.be.true;
@@ -321,12 +404,24 @@ describe("Core Logic", () => {
   });
 
   it("should not send a message to inactive subscriber when SEND CODE is sent by admin", async () => {
-    const subscribe = { Body: "test1", From: normalUser.phoneNumber };
+    const subscribe = {
+      Body: "test1",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     await logic.decipherMessage(subscribe);
-    const stop = { Body: "stop", From: normalUser.phoneNumber };
+    const stop = {
+      Body: "stop",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     await logic.decipherMessage(stop);
 
-    const adminMessage = { Body: "send test1", From: admin.phoneNumber };
+    const adminMessage = {
+      Body: "send test1",
+      From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     const adminResponse = await logic.decipherMessage(adminMessage);
 
     expect(adminResponse).to.equal(
@@ -334,22 +429,29 @@ describe("Core Logic", () => {
     );
     expect(sendStub.callCount).to.equal(0);
 
-    const start = { Body: "start", From: normalUser.phoneNumber };
+    const start = {
+      Body: "start",
+      From: normalUser.phoneNumber,
+      To: entity.accountPhoneNumber,
+    };
     await logic.decipherMessage(start);
   });
 
   it("should send error it throws unexpectedly", async () => {
-    sinon.stub(logic, "addCampaignCode").throws({message:"Something went very wrong!"});
+    sinon
+      .stub(logic, "addCampaignCode")
+      .throws({ message: "Something went very wrong!" });
     const message = {
       Body: "add code anything",
       From: admin.phoneNumber,
+      To: entity.accountPhoneNumber,
     };
     const response = await logic.decipherMessage(message);
 
     expect(response).to.equal(responses.ERROR);
   });
 
-  describe("admin sending unknown or incomplete commands", function() {
+  describe("admin sending unknown or incomplete commands", function () {
     const badCommands = [
       "sup doge",
       "NOTACODE",
@@ -366,14 +468,18 @@ describe("Core Logic", () => {
     ];
     badCommands.forEach(function (command) {
       it(`should return unknown message for '${command}' command`, async () => {
-        const message = { Body: command, From: admin.phoneNumber };
+        const message = {
+          Body: command,
+          From: admin.phoneNumber,
+          To: entity.accountPhoneNumber,
+        };
         const response = await logic.decipherMessage(message);
         expect(response).to.equal(responses.UNKNOWN);
       });
     });
   });
 
-  describe("non-admin calling admin functions", function() {
+  describe("non-admin calling admin functions", function () {
     const validAdminCommands = [
       "send test1",
       "add admin (555)555-5555",
@@ -388,9 +494,13 @@ describe("Core Logic", () => {
     ];
     validAdminCommands.forEach(function (command) {
       it(`should return unknown message for '${command}' command`, async () => {
-          const message = { Body: command, From: normalUser.phoneNumber };
-          const response = await logic.decipherMessage(message);
-          expect(response).to.equal(responses.UNKNOWN);        
+        const message = {
+          Body: command,
+          From: normalUser.phoneNumber,
+          To: entity.accountPhoneNumber,
+        };
+        const response = await logic.decipherMessage(message);
+        expect(response).to.equal(responses.UNKNOWN);
       });
     });
   });

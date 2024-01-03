@@ -3,6 +3,7 @@ import chai from "chai";
 const expect = chai.expect;
 
 import logic from "../lib/logic.js";
+import entityModel from "../model/entities.js";
 import stateModel from "../model/state.js";
 import phoneNumberModel from "../model/phoneNumbers.js";
 import messenger from "../lib/services/messenger.js";
@@ -16,7 +17,7 @@ describe("decipherMessage", () => {
   let sendStub;
 
   beforeEach(() => {
-    getCampaignCodesStub = sinon.stub(stateModel, "getCampaignCodes");
+    getCampaignCodesStub = sinon.stub(entityModel, "getCampaignCodes");
     findByPhoneNumberStub = sinon.stub(phoneNumberModel, "findByPhoneNumber");
     createStub = sinon.stub(phoneNumberModel, "createOrUpdate");
     sendStub = sinon.stub(messenger, "send");
@@ -57,7 +58,11 @@ describe("decipherMessage", () => {
           isAdmin: false,
         },
       ]);
-      await logic.decipherMessage({ Body: "SEND LOC1", From: "+1234567890" });
+      await logic.decipherMessage({
+        Body: "SEND LOC1",
+        From: "+1234567890",
+        To: "+17777777777",
+      });
 
       expect(findAllStub.calledOnceWithExactly("LOC1"));
       expect(sendStub.callCount).to.equal(3);
@@ -67,6 +72,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "ADD ADMIN 9999999999",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(
@@ -80,10 +86,11 @@ describe("decipherMessage", () => {
     });
 
     it("should call addCode when message is ADD CODE", async () => {
-      const addCodeStub = sinon.stub(stateModel, "addCampaignCode");
+      const addCodeStub = sinon.stub(entityModel, "addCampaignCode");
       const response = await logic.decipherMessage({
         Body: "ADD CODE TEST",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(addCodeStub.calledOnceWithExactly("TEST"));
@@ -94,6 +101,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "REMOVE ADMIN 9999999999",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(
@@ -106,7 +114,7 @@ describe("decipherMessage", () => {
     });
 
     it("should call removeCode when message is REMOVE CODE", async () => {
-      const removeCodeStub = sinon.stub(stateModel, "removeCampaignCode");
+      const removeCodeStub = sinon.stub(entityModel, "removeCampaignCode");
       const phoneNumberStub = sinon.stub(
         phoneNumberModel,
         "updateCampaignCode"
@@ -115,6 +123,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "REMOVE CODE TEST",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(removeCodeStub.calledOnceWithExactly("TEST"));
@@ -123,7 +132,7 @@ describe("decipherMessage", () => {
     });
 
     it("should call changeCampaignCode when message is CHANGE CODE", async () => {
-      const stateStub = sinon.stub(stateModel, "updateCampaignCode");
+      const stateStub = sinon.stub(entityModel, "updateCampaignCode");
       const phoneNumberStub = sinon.stub(
         phoneNumberModel,
         "updateCampaignCode"
@@ -131,6 +140,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "CHANGE CODE TEST1 TEST2",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(stateStub.calledOnceWithExactly("TEST1", "TEST2"));
@@ -142,6 +152,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "STATUS",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(response).to.equal("RUNNING");
@@ -150,7 +161,7 @@ describe("decipherMessage", () => {
     it("should call shutDownProcess when message is SHUTDOWN", (done) => {
       const shutDownStub = sinon.stub(logic, "shutDownProcess");
       logic
-        .decipherMessage({ Body: "SHUTDOWN", From: "+1234567890" })
+        .decipherMessage({ Body: "SHUTDOWN", From: "+1234567890", To: "+17777777777", })
         .then(() => {
           setTimeout(() => {
             expect(shutDownStub.callCount).to.equal(1);
@@ -181,6 +192,7 @@ describe("decipherMessage", () => {
       await logic.decipherMessage({
         Body: "CUSTOM LOC1 Hello world!",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(findAllStub.calledOnceWithExactly("LOC1"));
@@ -197,6 +209,7 @@ describe("decipherMessage", () => {
       const response = await logic.decipherMessage({
         Body: "SET MESSAGE Hello world!",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(response).to.equal("Default message has been set");
@@ -210,30 +223,27 @@ describe("decipherMessage", () => {
     });
 
     it("should call stateModel.updateSetting when message is SET MESSAGE and setting exists", async () => {
-      const getSettingStub = sinon.stub(stateModel, "getSetting");
-      getSettingStub.resolves("existing message");
-      const updateSettingStub = sinon.stub(stateModel, "updateSetting");
-      const createSettingStub = sinon.stub(stateModel, "createSetting");
+      const setMessageStub = sinon.stub(entityModel, "setDefaultMessage");
 
       const response = await logic.decipherMessage({
         Body: "SET MESSAGE Hello world!",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(response).to.equal("Default message has been set");
       expect(
-        updateSettingStub.calledOnceWithExactly(
-          "deliveryMessage",
+        setMessageStub.calledOnceWithExactly(
           "Hello world!"
         )
       );
-      expect(createSettingStub.notCalled);
     });
 
     it("should send message back to admin when message is not recognized", async () => {
       await logic.decipherMessage({
         Body: "NOTVALIDINSTRUCTION",
         From: "+1234567890",
+        To: "+17777777777",
       });
 
       expect(
@@ -252,7 +262,11 @@ describe("decipherMessage", () => {
     });
 
     it("should add phone number to database and send confirmation when sent valid campaign code", async () => {
-      await logic.decipherMessage({ Body: "LOC1", From: "+15555555555" });
+      await logic.decipherMessage({
+        Body: "LOC1",
+        From: "+15555555555",
+        To: "+17777777777",
+      });
 
       expect(
         createStub.calledOnceWithExactly({
@@ -269,7 +283,11 @@ describe("decipherMessage", () => {
     });
 
     it("should send unrecognized code message when message is not valid", async () => {
-      await logic.decipherMessage({ Body: "INVALID", From: "+15555555555" });
+      await logic.decipherMessage({
+        Body: "INVALID",
+        From: "+15555555555",
+        To: "+17777777777",
+      });
 
       expect(createStub.callCount).to.equal(0);
       expect(
@@ -290,13 +308,21 @@ describe("decipherMessage", () => {
     });
 
     it("should overwrite current assigned campaignCode when signed up for different code", async () => {
-      await logic.decipherMessage({ Body: "LOC1", From: "+14444444444" });
+      await logic.decipherMessage({
+        Body: "LOC1",
+        From: "+14444444444",
+        To: "+17777777777",
+      });
 
       expect(createStub.callCount).to.equal(1);
     });
 
     it("should remove phone number from database and send confirmation when message is STOP", async () => {
-      await logic.decipherMessage({ Body: "STOP", From: "+14444444444" });
+      await logic.decipherMessage({
+        Body: "STOP",
+        From: "+14444444444",
+        To: "+17777777777",
+      });
 
       expect(
         removeStub.calledOnceWithExactly({
@@ -312,7 +338,11 @@ describe("decipherMessage", () => {
     });
 
     it("should send unrecognized code message when message is not valid", async () => {
-      await logic.decipherMessage({ Body: "INVALID", From: "+14444444444" });
+      await logic.decipherMessage({
+        Body: "INVALID",
+        From: "+14444444444",
+        To: "+17777777777",
+      });
 
       expect(createStub.callCount).to.equal(0);
       expect(
