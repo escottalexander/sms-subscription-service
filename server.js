@@ -4,7 +4,10 @@ const { MessagingResponse } = Twilio.twiml;
 import bodyParser from "body-parser";
 import logic from "./lib/logic.js";
 import logger from "./lib/services/logger.js";
+import taskScheduler from "./lib/services/taskScheduler.js";
 import reportingModel from "./model/reporting.js";
+
+taskScheduler.init();
 
 const app = express();
 const port = process.env.PORT || 3000;
