@@ -5,7 +5,13 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "export NODE_ENV=test && mocha ./test --exit"
+    "test": "export NODE_ENV=test && mocha ./test --exit",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.js": [
+      "detect-secrets-launcher"
+    ]
   },
   "author": "Elliott Alexander",
   "license": "ISC",
@@ -19,13 +25,9 @@
   "devDependencies": {
     "chai": "^4.3.7",
     "detect-secrets": "^1.0.6",
-    "husky": "^8.0.3",
-    "sinon": "^15.0.3",
-    "mocha": "^10.2.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "detect-secrets-hook"
-    }
+    "husky": "^8.0.0",
+    "lint-staged": "^15.2.0",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
   }
 }

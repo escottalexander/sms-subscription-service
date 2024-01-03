@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-detect-secrets-hook
+npm test
+echo "Running Secret Detection"
+npx lint-staged
