@@ -82,7 +82,7 @@ describe("Core Logic", () => {
     };
     const response = await logic.decipherMessage(message);
 
-    const codes = await stateModel.getCampaignCodes();
+    const codes = await entityModel.getCampaignCodes(entityId);
     expect(codes.includes("TEST"));
     expect(response).to.equal(responses.ADD_CODE.replace("%CODE%", "TEST"));
   });
@@ -102,7 +102,7 @@ describe("Core Logic", () => {
     };
     const response2 = await logic.decipherMessage(message2);
 
-    const codes = await stateModel.getCampaignCodes();
+    const codes = await entityModel.getCampaignCodes(entityId);
     expect(codes.includes("TEST1"));
     expect(codes.includes("TEST2"));
     expect(response1).to.equal(responses.ADD_CODE.replace("%CODE%", "TEST1"));

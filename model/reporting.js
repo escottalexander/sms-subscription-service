@@ -79,12 +79,15 @@ const reportingModel = {
   aggregateByDateRange: ({ entityId, startDate, endDate }) => {
     const UTCStartDate = normalizeDate(startDate);
     const UTCEndDate = normalizeDate(endDate);
+    const $match = {
+      date: { $gte: UTCStartDate, $lte: UTCEndDate },
+    };
+    if (entityId) {
+      $match.entityId = entityId;
+    }
     return daily.aggregate([
       {
-        $match: {
-          entityId,
-          date: { $gte: UTCStartDate, $lte: UTCEndDate },
-        },
+        $match,
       },
       {
         $group: {

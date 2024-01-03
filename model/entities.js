@@ -18,6 +18,9 @@ const entityModel = {
   findByEntityId: ({ entityId }) => {
     return collection.findOne({ entityId });
   },
+  getAll: () => {
+    return collection.find().toArray();
+  },
   findByPhoneNumber: (phoneNumber) => {
     return collection.findOne({ accountPhoneNumber: phoneNumber });
   },
