@@ -1,4 +1,4 @@
-import db from "../lib/services/mongodb.js";
+import db from "../services/mongodb.js";
 
 const collection = db.collection("phone-numbers");
 const phoneNumberModel = {

@@ -1,10 +1,10 @@
-import phoneNumberModel from "../model/phoneNumbers.js";
-import reportingModel from "../model/reporting.js";
+import phoneNumberModel from "./model/phoneNumbers.js";
+import reportingModel from "./model/reporting.js";
 import messenger from "./services/messenger.js";
 import logger from "./services/logger.js";
 import parsePhoneNumberFromString from "libphonenumber-js";
-import responses from "../responses.js";
-import entityModel from "../model/entities.js";
+import responses from "./responses.js";
+import entityModel from "./model/entities.js";
 
 const logic = {
   decipherMessage: async (reqBody) => {

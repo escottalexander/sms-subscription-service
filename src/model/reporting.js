@@ -1,4 +1,4 @@
-import db from "../lib/services/mongodb.js";
+import db from "../services/mongodb.js";
 
 const daily = db.collection("reporting-daily");
 

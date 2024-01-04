@@ -2,8 +2,8 @@ import express from "express";
 import Twilio from "twilio";
 const { MessagingResponse } = Twilio.twiml;
 import bodyParser from "body-parser";
-import logic from "./lib/logic.js";
-import logger from "./lib/services/logger.js";
+import logic from "./src/logic.js";
+import logger from "./src/services/logger.js";
 import reportingModel from "./model/reporting.js";
 
 const app = express();

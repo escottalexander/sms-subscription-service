@@ -2,11 +2,11 @@ import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-import logic from "../lib/logic.js";
-import entityModel from "../model/entities.js";
-import stateModel from "../model/state.js";
-import phoneNumberModel from "../model/phoneNumbers.js";
-import messenger from "../lib/services/messenger.js";
+import logic from "../src/logic.js";
+import entityModel from "../src/model/entities.js";
+import stateModel from "../src/model/state.js";
+import phoneNumberModel from "../src/model/phoneNumbers.js";
+import messenger from "../src/services/messenger.js";
 import config from "../config.js";
 
 describe("decipherMessage", () => {

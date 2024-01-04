@@ -2,13 +2,13 @@ import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-import db from "../lib/services/mongodb.js";
-import logic from "../lib/logic.js";
-import stateModel from "../model/state.js";
-import entityModel from "../model/entities.js";
-import phoneNumberModel from "../model/phoneNumbers.js";
-import messenger from "../lib/services/messenger.js";
-import responses from "../responses.js";
+import db from "../src/services/mongodb.js";
+import logic from "../src/logic.js";
+import stateModel from "../src/model/state.js";
+import entityModel from "../src/model/entities.js";
+import phoneNumberModel from "../src/model/phoneNumbers.js";
+import messenger from "../src/services/messenger.js";
+import responses from "../src/responses.js";
 
 const admin = { phoneNumber: "+12345678910", entityId: "00001", isAdmin: true, isActive: true };
 const normalUser = {

@@ -2,12 +2,12 @@ import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-import db from "../lib/services/mongodb.js";
-import logic from "../lib/logic.js";
-import phoneNumberModel from "../model/phoneNumbers.js";
-import entityModel from "../model/entities.js";
-import messenger from "../lib/services/messenger.js";
-import reportingModel from "../model/reporting.js";
+import db from "../src/services/mongodb.js";
+import logic from "../src/logic.js";
+import phoneNumberModel from "../src/model/phoneNumbers.js";
+import entityModel from "../src/model/entities.js";
+import messenger from "../src/services/messenger.js";
+import reportingModel from "../src/model/reporting.js";
 
 let entity;
 let entityId;

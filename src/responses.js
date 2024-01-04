@@ -1,4 +1,4 @@
-import config from "./config.js";
+import config from "../config.js";
 const responses = {
   SET_MESSAGE: "Default message has been set",
   VALID_CAMPAIGN_CODE:
