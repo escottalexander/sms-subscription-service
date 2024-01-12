@@ -1,16 +1,28 @@
-import sinon from "sinon";
-import chai from "chai";
+import * as sinon from "sinon";
+import * as chai from "chai";
 const expect = chai.expect;
 
-import db from "../src/services/mongodb.js";
-import logic from "../src/logic.js";
-import phoneNumberModel from "../src/model/phoneNumbers.js";
-import entityModel from "../src/model/entities.js";
+import connect from "../src/services/mongodb.js";
+import MessageHandler from "../src/server/messageHandler.js";
 import messenger from "../src/services/messenger.js";
-import reportingModel from "../src/model/reporting.js";
+import { Entity } from "../src/model/entities.js";
+import { Request, Response } from "express";
+import { Document } from "mongodb";
+import { mockRequest, mockResponse } from "mock-req-res";
 
-let entity;
-let entityId;
+const buildRequest = (params: {}) => { return mockRequest({ body: params }); };
+const buildResponse = () => { return mockResponse({type: ()=>{ return { send: sinon.stub() } } }); };
+
+let entity: Entity | null;
+let entityId: string | undefined;
+let messageHandler: MessageHandler;
+let getMessage: (code: string, user?: {
+  phoneNumber: string;
+  entityId: string;
+  isAdmin: boolean;
+  isActive: boolean;
+}) => Request;
+let getAdminMessage: (code: string) => Request;
 
 const admin = { phoneNumber: "+12345678910", entityId: "00001", isAdmin: true, isActive: true };
 const normalUser = {
@@ -20,16 +32,18 @@ const normalUser = {
   isActive: true,
 };
 const normalUser2 = {
-    phoneNumber: "+16555555556",
-    entityId: "00001",
-    isAdmin: false,
-    isActive: true,
-  };
+  phoneNumber: "+16555555556",
+  entityId: "00001",
+  isAdmin: false,
+  isActive: true,
+};
 
 async function init() {
-  sendStub = sinon.stub(messenger, "send").returns(true);
+  sendStub = sinon.stub(messenger, "send").resolves(true);
   // Drop all records in db
   try {
+    const db = await connect();
+    messageHandler = new MessageHandler(db);
     await db.collection("phone-numbers").drop();
     await db.collection("reporting-daily").drop();
     await db.collection("state").drop();
@@ -37,12 +51,12 @@ async function init() {
   } catch (err) {
     console.log("No collections were dropped because they don't exist");
   }
-  
+
 
   // Create an admin to test with
-  await phoneNumberModel.createOrUpdate(admin);
+  await messageHandler.models.phoneNumber.createOrUpdate(admin);
 
-  await entityModel.createOrUpdate({
+  await messageHandler.models.entity.createOrUpdate({
     entityId: "00001",
     accountPhoneNumber: "+17777777777",
     defaultMessage: "This is the default message",
@@ -50,51 +64,57 @@ async function init() {
     contactName: "Test Contact",
     contactNumber: "+18888888888",
   });
-  entity = await entityModel.findByPhoneNumber("+17777777777");
-  entityId = entity.entityId;
+  entity = await messageHandler.models.entity.findByPhoneNumber("+17777777777");
+  entityId = entity?.entityId;
+
+  getMessage = (code: string, user?: {
+    phoneNumber: string;
+    entityId: string;
+    isAdmin: boolean;
+    isActive: boolean;
+  }) => {
+    return buildRequest({ Body: code, From: user ? user.phoneNumber : normalUser.phoneNumber, To: entity?.accountPhoneNumber });
+  };
+  getAdminMessage = (code: string) => {
+    return buildRequest({ Body: code, From: admin.phoneNumber, To: entity?.accountPhoneNumber });
+  };
 }
 
-let sendStub;
-describe("Reporting Tests", function() {
+let sendStub: sinon.SinonStub;
+describe("Reporting Tests", function () {
   beforeEach(init);
-  afterEach(async function() {
+  afterEach(async function () {
     sendStub.restore();
   });
 
   it("should show each action in reports", async () => {
-    const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
-    };
-    const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
-    };
     // Setup
-    await logic.decipherMessage(getAdminMessage("add code report"));
-    await logic.decipherMessage(getAdminMessage("add code report2"));
+    await messageHandler.handle(getAdminMessage("add code report"), buildResponse());
+    await messageHandler.handle(getAdminMessage("add code report2"), buildResponse());
     // Start Subscribe
-    await logic.decipherMessage(getMessage("report"));
+    await messageHandler.handle(getMessage("report"), buildResponse());
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
     // Change Subscribe
-    await logic.decipherMessage(getMessage("report2"));
+    await messageHandler.handle(getMessage("report2"), buildResponse());
     // End Subscribe
-    await logic.decipherMessage(getMessage("stop"));
+    await messageHandler.handle(getMessage("stop"), buildResponse());
 
     const startDate = new Date();
     startDate.setHours(startDate.getHours());
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 24);
 
-    const reportArr = await reportingModel.findByDateRange({
-      entityId,
+    const reportArr = await messageHandler.models.reporting.findByDateRange({
+      entityId: entityId as string,
       startDate,
       endDate,
     });
-    const report = reportArr[0];
+    const report: any = reportArr[0];
     expect(report).to.exist;
     expect(report.campaignCodes).to.exist;
     expect(Object.keys(report.campaignCodes).length).to.equal(2);
@@ -111,7 +131,7 @@ describe("Reporting Tests", function() {
         endSubscriptionCount: 1,
       })
     );
-    const expected = {
+    const expected: any = {
       startSubscriptionCount: 1,
       sentCount: 1,
       failedCount: 1,
@@ -124,43 +144,36 @@ describe("Reporting Tests", function() {
   });
 
   it("should increment when they occur multiple times", async () => {
-    
-    const getMessage = (code, user) => {
-      return { Body: code, From: user.phoneNumber, To: entity.accountPhoneNumber };
-    };
-    const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
-    };
     // Setup
-    await logic.decipherMessage(getAdminMessage("add code report"));
-    await logic.decipherMessage(getAdminMessage("add code report2"));
+    await messageHandler.handle(getAdminMessage("add code report"), buildResponse());
+    await messageHandler.handle(getAdminMessage("add code report2"), buildResponse());
     // Start Subscribe
-    await logic.decipherMessage(getMessage("report", normalUser));
-    await logic.decipherMessage(getMessage("report", normalUser2));
+    await messageHandler.handle(getMessage("report", normalUser), buildResponse());
+    await messageHandler.handle(getMessage("report", normalUser2), buildResponse());
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
     // Change Subscribe
-    await logic.decipherMessage(getMessage("report2", normalUser));
-    await logic.decipherMessage(getMessage("report2", normalUser2));
+    await messageHandler.handle(getMessage("report2", normalUser), buildResponse());
+    await messageHandler.handle(getMessage("report2", normalUser2), buildResponse());
     // End Subscribe
-    await logic.decipherMessage(getMessage("stop", normalUser));
-    await logic.decipherMessage(getMessage("stop", normalUser2));
+    await messageHandler.handle(getMessage("stop", normalUser), buildResponse());
+    await messageHandler.handle(getMessage("stop", normalUser2), buildResponse());
 
     const startDate = new Date();
     startDate.setHours(startDate.getHours());
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 24);
 
-    const reportArr = await reportingModel.findByDateRange({
-      entityId,
+    const reportArr = await messageHandler.models.reporting.findByDateRange({
+      entityId: entityId as string,
       startDate,
       endDate,
     });
-    const report = reportArr[0];
+    const report: any = reportArr[0];
     expect(report).to.exist;
     expect(report.campaignCodes).to.exist;
     expect(Object.keys(report.campaignCodes).length).to.equal(2);
@@ -177,7 +190,7 @@ describe("Reporting Tests", function() {
         endSubscriptionCount: 2,
       })
     );
-    const expected = {
+    const expected: any = {
       startSubscriptionCount: 2,
       sentCount: 2,
       failedCount: 2,
@@ -194,42 +207,36 @@ describe("Reporting Tests", function() {
     let clock = sinon.useFakeTimers(now.getTime());
 
     const aDay = 24 * 60 * 60 * 1000;
-    const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
-    };
-    const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
-    };
     // Setup
-    await logic.decipherMessage(getAdminMessage("add code report"));
-    await logic.decipherMessage(getAdminMessage("add code report2"));
+    await messageHandler.handle(getAdminMessage("add code report"), buildResponse());
+    await messageHandler.handle(getAdminMessage("add code report2"), buildResponse());
 
     // Day 1
     // Start Subscribe
-    await logic.decipherMessage(getMessage("report"));
+    await messageHandler.handle(getMessage("report"), buildResponse());
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
 
     // Day 2
     clock.tick(aDay);
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
 
     // Day 3
     clock.tick(aDay);
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
 
     clock.restore();
@@ -239,8 +246,8 @@ describe("Reporting Tests", function() {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 48);
 
-    const reportArr = await reportingModel.findByDateRange({
-      entityId,
+    const reportArr = await messageHandler.models.reporting.findByDateRange({
+      entityId: entityId as string,
       startDate,
       endDate,
     });
@@ -257,43 +264,41 @@ describe("Reporting Tests", function() {
     let clock = sinon.useFakeTimers(now.getTime());
 
     const aDay = 24 * 60 * 60 * 1000;
-    const getMessage = (code) => {
-      return { Body: code, From: normalUser.phoneNumber, To: entity.accountPhoneNumber };
-    };
-    const getAdminMessage = (code) => {
-      return { Body: code, From: admin.phoneNumber, To: entity.accountPhoneNumber };
-    };
     // Setup
-    await logic.decipherMessage(getAdminMessage("add code report"));
-    await logic.decipherMessage(getAdminMessage("add code report2"));
+    await messageHandler.handle(getAdminMessage("add code report"), buildResponse());
+    await messageHandler.handle(getAdminMessage("add code report2"), buildResponse());
 
     // Day 1
     // Start Subscribe
-    await logic.decipherMessage(getMessage("report"));
+    await messageHandler.handle(getMessage("report"), buildResponse());
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
 
     // Day 2
     clock.tick(aDay);
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
 
     // Day 3
     clock.tick(aDay);
     // Sent message
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
     sendStub.returns(false);
-    await logic.decipherMessage(getAdminMessage("send report"));
+    await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     sendStub.returns(true);
+    // Change Subscribe
+    await messageHandler.handle(getMessage("report2"), buildResponse());
+    // End Subscribe
+    await messageHandler.handle(getMessage("stop"), buildResponse());
 
     clock.restore();
 
@@ -302,11 +307,11 @@ describe("Reporting Tests", function() {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 48);
 
-    const reportArr = await reportingModel.aggregateByDateRange({
-      entityId,
+    const reportArr: Document[] = await messageHandler.models.reporting.aggregateByDateRange({
+      entityId: entityId as string,
       startDate,
       endDate,
-    });
+    }).toArray();
     expect(reportArr).to.exist;
     expect(reportArr.length).to.equal(1);
     const report = reportArr[0];
@@ -314,8 +319,8 @@ describe("Reporting Tests", function() {
     expect(report.totalFailedCount).to.equal(3);
     expect(report.totalSentCount).to.equal(3);
     expect(report.totalStartSubscriptionCount).to.equal(1);
-    expect(report.totalEndSubscriptionCount).to.equal(0);
-    expect(report.totalChangeSubscriptionCount).to.equal(0);
-    expect(report.totalResponseCount).to.equal(0);
+    expect(report.totalEndSubscriptionCount).to.equal(1);
+    expect(report.totalChangeSubscriptionCount).to.equal(1);
+    expect(report.totalResponseCount).to.equal(10);
   });
 });

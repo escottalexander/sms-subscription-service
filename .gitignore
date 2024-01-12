@@ -1,6 +1,6 @@
 node_modules
-config.js
-combined.log
-error.log
-log
+.env
+*.log
+.*-audit.json
 contact_exports/
+build/
