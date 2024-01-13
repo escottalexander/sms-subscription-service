@@ -11,6 +11,7 @@ import { PhoneNumberModel, PhoneNumber } from "../src/model/phoneNumbers.js";
 import messenger from "../src/services/messenger.js";
 import { Db, WithId } from "mongodb";
 import { ReportingModel } from "../src/model/reporting.js";
+import responses from "../src/server/responses.js";
 
 const entity = {
   entityId: "00001",
@@ -121,11 +122,12 @@ describe("decipherMessage", () => {
 
       expect(
         createStub.calledOnceWithExactly({
-          phoneNumber: "+9999999999",
+          entityId: "00001",
+          phoneNumber: "+19999999999",
           isAdmin: true,
           isActive: true,
         })
-      );
+      ).to.be.true;
       expect(response).to.equal("Added '9999999999' as an admin.");
     });
 
@@ -162,10 +164,11 @@ describe("decipherMessage", () => {
 
       expect(
         createStub.calledOnceWithExactly({
-          phoneNumber: "+9999999999",
+          entityId: "00001",
+          phoneNumber: "+19999999999",
           isAdmin: false,
         })
-      );
+      ).to.be.true;
       expect(response).to.equal("Removed '9999999999' as an admin.");
     });
 
@@ -311,7 +314,7 @@ describe("decipherMessage", () => {
       expect(response).to.equal("Default message has been set");
       expect(
         setMessageStub.calledOnceWithExactly("00001", "Hello world!")
-      );
+      ).to.be.true;
     });
 
     it("should call EntityModel.getDefaultMessage when message is GET MESSAGE", async () => {
@@ -332,7 +335,7 @@ describe("decipherMessage", () => {
       expect(response).to.equal("This is the default message");
       expect(
         getDefaultMessageStub.calledOnceWithExactly("00001")
-      );
+      ).to.be.true;
     });
 
     it("should call EntityModel.getLastCode when message is GET LAST CODE", async () => {
@@ -354,7 +357,202 @@ describe("decipherMessage", () => {
       expect(response).to.equal("CODE");
       expect(
         getLastCodeStub.calledOnceWithExactly("00001")
-      );
+      ).to.be.true;
+    });
+
+    it("should call EntityModel.setMessage when message is SET MESSAGE:%NAME%", async () => {
+      const setMessageStub = sinon.stub(EntityModel.prototype, "setMessage");
+      const req = {
+        Body: "SET MESSAGE:MSG1 This is message 1",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal("Set new message with name: MSG1");
+      expect(
+        setMessageStub.calledOnceWithExactly("00001", "MSG1", "This is message 1")
+      ).to.be.true;
+      setMessageStub.resetHistory();
+      const req2 = {
+        Body: "SET MESSAGE:MSG2 This is message 2",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx2 = getRequestContext(req2, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response2 = await messageHandler.decipherMessage(reqCtx2, req2);
+
+      expect(response2).to.equal("Set new message with name: MSG2");
+      expect(
+        setMessageStub.calledOnceWithExactly("00001", "MSG2", "This is message 2")
+      ).to.be.true;
+    });
+
+    it("should call EntityModel.getMessage when message is GET MESSAGE:%NAME%", async () => {
+      const getMessageStub = sinon.stub(EntityModel.prototype, "getMessage");
+      getMessageStub.resolves("This is message 1");
+      const req = {
+        Body: "GET MESSAGE:MSG1",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal("This is message 1");
+      expect(
+        getMessageStub.calledOnceWithExactly("00001", "MSG1")
+      ).to.be.true;
+      getMessageStub.resetHistory();
+      getMessageStub.resolves("This is message 2");
+      const req2 = {
+        Body: "GET MESSAGE:MSG2",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx2 = getRequestContext(req2, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response2 = await messageHandler.decipherMessage(reqCtx2, req2);
+
+      expect(response2).to.equal("This is message 2");
+      expect(
+        getMessageStub.calledOnceWithExactly("00001", "MSG2")
+      ).to.be.true;
+    });
+
+    it("should call EntityModel.getMessageNames when message is GET MESSAGE NAMES", async () => {
+      const getMessageNamesStub = sinon.stub(EntityModel.prototype, "getMessageNames");
+      getMessageNamesStub.resolves(["MSG1","MSG2","MSG3","MSG4"]);
+      const req = {
+        Body: "GET MESSAGE NAMES",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal("MSG1,\nMSG2,\nMSG3,\nMSG4");
+      expect(
+        getMessageNamesStub.calledOnceWithExactly("00001")
+      ).to.be.true;
+    });
+
+    it("should call EntityModel.setDefaultMessage when message is SET DEFAULT %NAME%", async () => {
+      const getMessageStub = sinon.stub(EntityModel.prototype, "getMessage");
+      getMessageStub.resolves("This is message 1");
+      const setDefaultMessageStub = sinon.stub(EntityModel.prototype, "setDefaultMessage");
+
+      const req = {
+        Body: "SET DEFAULT MSG1",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal(responses.SET_MESSAGE);
+      expect(
+        getMessageStub.calledOnceWithExactly("00001", "MSG1")
+      ).to.be.true;
+      expect(
+        setDefaultMessageStub.calledOnceWithExactly("00001", "This is message 1")
+      ).to.be.true;
+    });
+
+    it("should call return error when message name does not exist for is SET DEFAULT %NAME%", async () => {
+      const getMessageStub = sinon.stub(EntityModel.prototype, "getMessage");
+      getMessageStub.resolves(undefined);
+      const setDefaultMessageStub = sinon.stub(EntityModel.prototype, "setDefaultMessage");
+
+      const req = {
+        Body: "SET DEFAULT MSG1",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal(responses.UNKNOWN_MSG_NAME);
+      expect(
+        getMessageStub.calledOnceWithExactly("00001", "MSG1")
+      ).to.be.true;
+      expect(setDefaultMessageStub.notCalled).to.be.true;
+    });
+
+    it("should call handleDeliveryMessage and use named message when message is a campaign code", async () => {
+      const findAllStub = sinon.stub(PhoneNumberModel.prototype, "findAllByCode");
+      findAllStub.resolves([
+        {
+          phoneNumber: "+1234567890",
+          campaignCode: "LOC1",
+          isAdmin: false,
+        },
+        {
+          phoneNumber: "+2234567890",
+          campaignCode: "LOC1",
+          isAdmin: false,
+        },
+        {
+          phoneNumber: "+3234567890",
+          campaignCode: "LOC1",
+          isAdmin: false,
+        },
+      ] as WithId<PhoneNumber>[]);
+      const getMessageStub = sinon.stub(EntityModel.prototype, "getMessage");
+      getMessageStub.resolves("This is message 1");
+      const req = {
+        Body: "SEND MESSAGE:MSG1 LOC1",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+      await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(findAllStub.calledOnceWithExactly({entityId: "00001", campaignCode: "LOC1"}));
+      expect(getMessageStub.calledOnceWithExactly("00001", "MSG1"));
+      expect(sendStub.callCount).to.equal(3);
+      expect(sendStub.calledWith("+1234567890", "This is message 1"));
+      expect(sendStub.calledWith("+2234567890", "This is message 1"));
+      expect(sendStub.calledWith("+3234567890", "This is message 1"));
     });
 
     it("should send message back to admin when message is not recognized", async () => {
@@ -370,14 +568,8 @@ describe("decipherMessage", () => {
         isActive: true,
       });
 
-      await messageHandler.decipherMessage(reqCtx, req);
-
-      expect(
-        sendStub.calledOnceWithExactly(
-          "+1234567890",
-          "I don't recognize that instruction... is there a typo?"
-        )
-      );
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+      expect(response).to.equal(responses.UNKNOWN);
     });
   });
 
@@ -395,20 +587,17 @@ describe("decipherMessage", () => {
       };
       const reqCtx = getRequestContext(req);
 
-      await messageHandler.decipherMessage(reqCtx, req);
+      const response = await messageHandler.decipherMessage(reqCtx, req);
 
       expect(
         createStub.calledOnceWithExactly({
+          entityId: "00001",
           phoneNumber: "+15555555555",
           campaignCode: "LOC1",
+          isActive: true,
         })
-      );
-      expect(
-        sendStub.calledOnceWithExactly(
-          "+15555555555",
-          "You have been signed up to receive notifications. If at any point you want to stop receiving messages, text STOP"
-        )
-      );
+      ).to.be.true;
+      expect(response).to.equal(responses.VALID_CAMPAIGN_CODE);
     });
 
     it("should send unrecognized code message when message is not valid", async () => {
@@ -419,14 +608,10 @@ describe("decipherMessage", () => {
       };
       const reqCtx = getRequestContext(req);
 
-      await messageHandler.decipherMessage(reqCtx, req);
+      const response = await messageHandler.decipherMessage(reqCtx, req);
 
       expect(createStub.callCount).to.equal(0);
-      expect(
-        sendStub.calledOnceWithExactly(
-          `We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ${support_number_numan_readable} explaining the problem.`
-        )
-      );
+      expect(response).to.equal(responses.UNKNOWN);
     });
   });
 
@@ -472,16 +657,13 @@ describe("decipherMessage", () => {
       await messageHandler.decipherMessage(reqCtx, req);
 
       expect(
-        removeStub.calledOnceWithExactly({
+        createStub.calledOnceWithExactly({
+          entityId: "00001",
           phoneNumber: "+14444444444",
+          isActive: false,
         })
-      );
-      expect(
-        sendStub.calledOnceWithExactly(
-          "+14444444444",
-          "Unsubscribe successful. You will no longer receive notifications."
-        )
-      );
+      ).to.be.true;
+      expect(sendStub.notCalled).to.be.true;
     });
 
     it("should send unrecognized code message when message is not valid", async () => {
@@ -496,14 +678,11 @@ describe("decipherMessage", () => {
         isActive: true,
       });
 
-      await messageHandler.decipherMessage(reqCtx, req);
+      const response = await messageHandler.decipherMessage(reqCtx, req);
 
       expect(createStub.callCount).to.equal(0);
-      expect(
-        sendStub.calledOnceWithExactly(
-          `We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ${support_number_numan_readable} explaining the problem.`
-        )
-      );
+      expect(sendStub.notCalled).to.be.true;
+      expect(response).to.equal(responses.UNKNOWN);
     });
   });
 });

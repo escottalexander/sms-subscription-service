@@ -20,10 +20,18 @@ For admin users, they can use these commands in addition:
 - `REMOVE CODE %CODE%` - To remove a campaign code and unsubscribe all subscribers with that code. Consider using `CHANGE CODE` as it migrates users without them having to sign up for a new code.
 - `SET MESSAGE %MESSAGE%` - Set the default message that is sent to subscribers.
 - `GET MESSAGE` - Get the default message.
-- `CUSTOM %CODE OR ALL% %MESSAGE%` - To send a custom message to either a specific campaign or use ALL to send to entire list.
 - `GET LAST CODE` - To view the last subscription code used to send messages.
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
+
+# Advanced commands
+- `SEND MESSAGE:%MESSAGE NAME% %CODE%` - Send a saved message to a specific group of subscribers.
+- `SET MESSAGE:%MESSAGE NAME% %MESSAGE%` - Save a message with a name for later retrieval.
+- `GET MESSAGE:%MESSAGE NAME%` - Retrieve a saved message by its name.
+- `GET MESSAGE NAMES` - See all saved message names.
+- `SET DEFAULT %MESSAGE NAME%` - Sets default message to a saved message by it's name
+- `CUSTOM %CODE OR ALL% %MESSAGE%` - To send a custom message to either a specific campaign or use ALL to send to entire list.
+
 
 # Set up
 You will need:

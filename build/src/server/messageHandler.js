@@ -134,16 +134,16 @@ var MessageHandler = /** @class */ (function () {
     ;
     MessageHandler.prototype.decipherMessage = function (requestContext, reqBody) {
         return __awaiter(this, void 0, void 0, function () {
-            var message, fromPhone, fromPhoneNumberEntry, entity, entityId, entityPhone, campaignCodes, _a, subExists, fieldName, strCmd, count, newAdmin, response, admin, response, count, message_1, lastCode, e_1;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var message, fromPhone, fromPhoneNumberEntry, entity, entityId, entityPhone, _a, campaignCodes, _b, subExists, fieldName, strCmd, count, messageName, newAdmin, response, admin, response, count, name, message_1, message_2, message_3, name, message_4, lastCode, e_1;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
-                        _b.trys.push([0, 33, , 34]);
+                        _c.trys.push([0, 43, , 44]);
                         message = requestContext.message, fromPhone = requestContext.fromPhone, fromPhoneNumberEntry = requestContext.fromPhoneNumberEntry, entity = requestContext.entity;
-                        entityId = entity.entityId, entityPhone = entity.accountPhoneNumber, campaignCodes = entity.campaignCodes;
+                        entityId = entity.entityId, entityPhone = entity.accountPhoneNumber, _a = entity.campaignCodes, campaignCodes = _a === void 0 ? [] : _a;
                         message = message.toUpperCase().trim();
-                        _a = message;
-                        switch (_a) {
+                        _b = message;
+                        switch (_b) {
                             case "STOP": return [3 /*break*/, 1];
                             case "UNSTOP": return [3 /*break*/, 3];
                             case "START": return [3 /*break*/, 3];
@@ -151,11 +151,11 @@ var MessageHandler = /** @class */ (function () {
                         return [3 /*break*/, 5];
                     case 1: return [4 /*yield*/, this.endSubscription(entityId, fromPhone)];
                     case 2:
-                        _b.sent();
+                        _c.sent();
                         return [2 /*return*/];
                     case 3: return [4 /*yield*/, this.startSubscription(entityId, fromPhone)];
                     case 4:
-                        _b.sent();
+                        _c.sent();
                         return [2 /*return*/];
                     case 5:
                         if (!campaignCodes.includes(message)) return [3 /*break*/, 8];
@@ -171,106 +171,144 @@ var MessageHandler = /** @class */ (function () {
                                 isActive: true,
                             })];
                     case 6:
-                        _b.sent();
+                        _c.sent();
                         fieldName = subExists ? "changeSubscriptionCount" : "startSubscriptionCount";
                         return [4 /*yield*/, this.models.reporting.incrementCount({ entityId: entityId, campaignCode: message, fieldName: fieldName })];
                     case 7:
-                        _b.sent();
+                        _c.sent();
                         return [2 /*return*/, responses_js_1.default.VALID_CAMPAIGN_CODE];
                     case 8:
-                        if (!(fromPhoneNumberEntry && fromPhoneNumberEntry.isAdmin && fromPhoneNumberEntry.isActive)) return [3 /*break*/, 32];
-                        if (!(message.split(" ").length > 1)) return [3 /*break*/, 31];
+                        if (!(fromPhoneNumberEntry && fromPhoneNumberEntry.isAdmin && fromPhoneNumberEntry.isActive)) return [3 /*break*/, 42];
+                        if (!(message.split(" ").length > 1)) return [3 /*break*/, 41];
                         strCmd = message.split(" ");
                         if (!(strCmd[0] === "SEND" && campaignCodes.includes(strCmd[1]))) return [3 /*break*/, 10];
                         return [4 /*yield*/, this.handleDeliveryMessage(entityPhone, entityId, strCmd[1])];
                     case 9:
-                        count = _b.sent();
+                        count = _c.sent();
                         return [2 /*return*/, responses_js_1.default.SEND_CODE.replace("%CODE%", strCmd[1]).replace("%COUNT%", count.toString())];
                     case 10:
-                        if (!(strCmd[0] === "ADD")) return [3 /*break*/, 15];
-                        if (!(strCmd[1] === "ADMIN" && strCmd[2])) return [3 /*break*/, 12];
+                        if (!(strCmd[0] === "SEND" && strCmd[1].includes("MESSAGE:") && campaignCodes.includes(strCmd[2]))) return [3 /*break*/, 12];
+                        messageName = strCmd[1].replace("MESSAGE:", "");
+                        return [4 /*yield*/, this.sendNamedMessage(entityPhone, entityId, messageName, strCmd[2])];
+                    case 11: return [2 /*return*/, _c.sent()];
+                    case 12:
+                        if (!(strCmd[0] === "ADD")) return [3 /*break*/, 17];
+                        if (!(strCmd[1] === "ADMIN" && strCmd[2])) return [3 /*break*/, 14];
                         newAdmin = strCmd.join("").replace("ADDADMIN", "");
                         return [4 /*yield*/, this.addAdmin(entityId, newAdmin)];
-                    case 11:
-                        response = _b.sent();
+                    case 13:
+                        response = _c.sent();
                         return [2 /*return*/, response];
-                    case 12:
+                    case 14:
                         if (!(strCmd[1] === "CODE" &&
                             strCmd[2] &&
-                            strCmd[2] !== "STOP")) return [3 /*break*/, 14];
+                            strCmd[2] !== "STOP")) return [3 /*break*/, 16];
                         // Disallow STOP as a campaignCode
                         // add campaign code
                         return [4 /*yield*/, this.addCampaignCode(entityId, strCmd[2])];
-                    case 13:
+                    case 15:
                         // Disallow STOP as a campaignCode
                         // add campaign code
-                        _b.sent();
+                        _c.sent();
                         return [2 /*return*/, responses_js_1.default.ADD_CODE.replace("%CODE%", strCmd[2])];
-                    case 14: return [3 /*break*/, 30];
-                    case 15:
-                        if (!(strCmd[0] === "REMOVE")) return [3 /*break*/, 20];
-                        if (!(strCmd[1] === "ADMIN" && strCmd[2])) return [3 /*break*/, 17];
+                    case 16: return [3 /*break*/, 40];
+                    case 17:
+                        if (!(strCmd[0] === "REMOVE")) return [3 /*break*/, 22];
+                        if (!(strCmd[1] === "ADMIN" && strCmd[2])) return [3 /*break*/, 19];
                         admin = strCmd.join("").replace("REMOVEADMIN", "");
                         return [4 /*yield*/, this.removeAdmin(entityId, admin)];
-                    case 16:
-                        response = _b.sent();
+                    case 18:
+                        response = _c.sent();
                         return [2 /*return*/, response];
-                    case 17:
-                        if (!(strCmd[1] === "CODE" && strCmd[2])) return [3 /*break*/, 19];
+                    case 19:
+                        if (!(strCmd[1] === "CODE" && strCmd[2])) return [3 /*break*/, 21];
                         // remove campaign code
                         return [4 /*yield*/, this.removeCampaignCode(entityId, strCmd[2])];
-                    case 18:
-                        // remove campaign code
-                        _b.sent();
-                        return [2 /*return*/, responses_js_1.default.REMOVE_CODE.replace("%CODE%", strCmd[2])];
-                    case 19: return [3 /*break*/, 30];
                     case 20:
+                        // remove campaign code
+                        _c.sent();
+                        return [2 /*return*/, responses_js_1.default.REMOVE_CODE.replace("%CODE%", strCmd[2])];
+                    case 21: return [3 /*break*/, 40];
+                    case 22:
                         if (!(strCmd[0] === "CHANGE" &&
                             strCmd[1] === "CODE" &&
                             strCmd[2] &&
                             strCmd[3] &&
-                            strCmd[3] !== "STOP")) return [3 /*break*/, 22];
+                            strCmd[3] !== "STOP")) return [3 /*break*/, 24];
                         // Disallow STOP as a campaignCode
                         // change code and all subscribers
                         return [4 /*yield*/, this.changeCampaignCode(entityId, strCmd[2], strCmd[3])];
-                    case 21:
+                    case 23:
                         // Disallow STOP as a campaignCode
                         // change code and all subscribers
-                        _b.sent();
+                        _c.sent();
                         return [2 /*return*/, responses_js_1.default.CHANGE_CODE.replace("%CODE1%", strCmd[2]).replace("%CODE2%", strCmd[3])];
-                    case 22:
+                    case 24:
                         if (!(strCmd[0] === "CUSTOM" &&
                             (campaignCodes.includes(strCmd[1]) || strCmd[1] === "ALL") &&
-                            strCmd[2])) return [3 /*break*/, 24];
+                            strCmd[2])) return [3 /*break*/, 26];
                         return [4 /*yield*/, this.sendCustomMessage(entityPhone, entityId, strCmd[1], reqBody.Body)];
-                    case 23:
-                        count = _b.sent();
+                    case 25:
+                        count = _c.sent();
                         return [2 /*return*/, responses_js_1.default.CUSTOM_MESSAGE.replace("%COUNT%", count.toString())];
-                    case 24:
+                    case 26:
                         if (!(strCmd[0] === "SET" &&
                             strCmd[1] === "MESSAGE" &&
-                            strCmd[2])) return [3 /*break*/, 26];
+                            strCmd[2])) return [3 /*break*/, 28];
                         return [4 /*yield*/, this.setDefaultMessage(entityId, reqBody.Body)];
-                    case 25:
-                        _b.sent();
-                        return [2 /*return*/, responses_js_1.default.SET_MESSAGE];
-                    case 26:
-                        if (!(strCmd[0] === "GET" &&
-                            strCmd[1] === "MESSAGE")) return [3 /*break*/, 28];
-                        return [4 /*yield*/, this.getDefaultMessage(entityId)];
                     case 27:
-                        message_1 = _b.sent();
-                        return [2 /*return*/, message_1];
+                        _c.sent();
+                        return [2 /*return*/, responses_js_1.default.SET_MESSAGE];
                     case 28:
+                        if (!(strCmd[0] === "SET" &&
+                            strCmd[1].includes("MESSAGE:") &&
+                            strCmd[2])) return [3 /*break*/, 30];
+                        name = strCmd[1].replace("MESSAGE:", "");
+                        return [4 /*yield*/, this.setMessage(entityId, name, reqBody.Body)];
+                    case 29:
+                        _c.sent();
+                        return [2 /*return*/, responses_js_1.default.SET_NAMED_MESSAGE.replace("%NAME%", name)];
+                    case 30:
+                        if (!(strCmd[0] === "SET" &&
+                            strCmd[1] === "DEFAULT" &&
+                            strCmd[2])) return [3 /*break*/, 32];
+                        return [4 /*yield*/, this.setDefaultMessageByName(entityId, strCmd[2])];
+                    case 31:
+                        message_1 = _c.sent();
+                        return [2 /*return*/, message_1];
+                    case 32:
+                        if (!(strCmd[0] === "GET" &&
+                            strCmd[1] === "MESSAGE" &&
+                            strCmd[2] === "NAMES")) return [3 /*break*/, 34];
+                        return [4 /*yield*/, this.getMessageNames(entityId)];
+                    case 33:
+                        message_2 = _c.sent();
+                        return [2 /*return*/, message_2];
+                    case 34:
+                        if (!(strCmd[0] === "GET" &&
+                            strCmd[1] === "MESSAGE")) return [3 /*break*/, 36];
+                        return [4 /*yield*/, this.getDefaultMessage(entityId)];
+                    case 35:
+                        message_3 = _c.sent();
+                        return [2 /*return*/, message_3];
+                    case 36:
+                        if (!(strCmd[0] === "GET" &&
+                            strCmd[1].includes("MESSAGE:"))) return [3 /*break*/, 38];
+                        name = strCmd[1].replace("MESSAGE:", "");
+                        return [4 /*yield*/, this.getMessage(entityId, name)];
+                    case 37:
+                        message_4 = _c.sent();
+                        return [2 /*return*/, message_4];
+                    case 38:
                         if (!(strCmd[0] === "GET" &&
                             strCmd[1] === "LAST" &&
-                            strCmd[2] === "CODE")) return [3 /*break*/, 30];
+                            strCmd[2] === "CODE")) return [3 /*break*/, 40];
                         return [4 /*yield*/, this.getLastCode(entityId)];
-                    case 29:
-                        lastCode = _b.sent();
+                    case 39:
+                        lastCode = _c.sent();
                         return [2 /*return*/, lastCode];
-                    case 30: return [3 /*break*/, 32];
-                    case 31:
+                    case 40: return [3 /*break*/, 42];
+                    case 41:
                         if (message === "STATUS") {
                             // Status check
                             return [2 /*return*/, responses_js_1.default.STATUS];
@@ -280,15 +318,15 @@ var MessageHandler = /** @class */ (function () {
                             setTimeout(this.shutDownProcess, 1000);
                             return [2 /*return*/, responses_js_1.default.SHUTDOWN];
                         }
-                        _b.label = 32;
-                    case 32: 
+                        _c.label = 42;
+                    case 42: 
                     // Default to this if nothing else was hit
                     return [2 /*return*/, responses_js_1.default.UNKNOWN];
-                    case 33:
-                        e_1 = _b.sent();
+                    case 43:
+                        e_1 = _c.sent();
                         logger_js_1.default.error(e_1.message);
                         return [2 /*return*/, responses_js_1.default.ERROR];
-                    case 34: return [2 /*return*/];
+                    case 44: return [2 /*return*/];
                 }
             });
         });
@@ -452,6 +490,63 @@ var MessageHandler = /** @class */ (function () {
         });
     };
     ;
+    MessageHandler.prototype.sendNamedMessage = function (entityPhone, entityId, messageName, campaignCode) {
+        return __awaiter(this, void 0, void 0, function () {
+            var message, subscribers, subscribers_3, subscribers_3_1, sub, success, e_4_1, count;
+            var e_4, _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.models.entity.getMessage(entityId, messageName)];
+                    case 1:
+                        message = _b.sent();
+                        if (!message) {
+                            return [2 /*return*/, responses_js_1.default.UNKNOWN_MSG_NAME];
+                        }
+                        return [4 /*yield*/, this.models.phoneNumber.findAllByCode({ entityId: entityId, campaignCode: campaignCode })];
+                    case 2:
+                        subscribers = _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        _b.trys.push([3, 10, 11, 12]);
+                        subscribers_3 = __values(subscribers), subscribers_3_1 = subscribers_3.next();
+                        _b.label = 4;
+                    case 4:
+                        if (!!subscribers_3_1.done) return [3 /*break*/, 9];
+                        sub = subscribers_3_1.value;
+                        return [4 /*yield*/, messenger_js_1.default.send(entityPhone, sub.phoneNumber, message)];
+                    case 5:
+                        success = _b.sent();
+                        return [4 /*yield*/, this.models.phoneNumber.incrementSendCount({ entityId: entityId, phoneNumber: sub.phoneNumber, success: success })];
+                    case 6:
+                        _b.sent();
+                        return [4 /*yield*/, this.models.reporting.incrementCount({ entityId: entityId, campaignCode: campaignCode, fieldName: success ? "sentCount" : "failedCount" })];
+                    case 7:
+                        _b.sent();
+                        _b.label = 8;
+                    case 8:
+                        subscribers_3_1 = subscribers_3.next();
+                        return [3 /*break*/, 4];
+                    case 9: return [3 /*break*/, 12];
+                    case 10:
+                        e_4_1 = _b.sent();
+                        e_4 = { error: e_4_1 };
+                        return [3 /*break*/, 12];
+                    case 11:
+                        try {
+                            if (subscribers_3_1 && !subscribers_3_1.done && (_a = subscribers_3.return)) _a.call(subscribers_3);
+                        }
+                        finally { if (e_4) throw e_4.error; }
+                        return [7 /*endfinally*/];
+                    case 12: return [4 /*yield*/, this.models.entity.setLastCode(entityId, campaignCode)];
+                    case 13:
+                        _b.sent();
+                        count = subscribers.length;
+                        return [2 /*return*/, responses_js_1.default.NAMED_MESSAGE.replace("%COUNT%", count.toString()).replace("%NAME%", messageName)];
+                }
+            });
+        });
+    };
+    ;
     MessageHandler.prototype.setDefaultMessage = function (entityId, unparsedMessage) {
         return __awaiter(this, void 0, void 0, function () {
             var message;
@@ -477,6 +572,73 @@ var MessageHandler = /** @class */ (function () {
                     case 1:
                         message = _a.sent();
                         return [2 /*return*/, message];
+                }
+            });
+        });
+    };
+    ;
+    MessageHandler.prototype.setMessage = function (entityId, name, unparsedMessage) {
+        return __awaiter(this, void 0, void 0, function () {
+            var message;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        message = unparsedMessage.split(" ").splice(2).join(" ");
+                        return [4 /*yield*/, this.models.entity.setMessage(entityId, name, message)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ;
+    MessageHandler.prototype.getMessage = function (entityId, name) {
+        return __awaiter(this, void 0, void 0, function () {
+            var message;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.models.entity.getMessage(entityId, name)];
+                    case 1:
+                        message = _a.sent();
+                        return [2 /*return*/, message];
+                }
+            });
+        });
+    };
+    ;
+    MessageHandler.prototype.setDefaultMessageByName = function (entityId, name) {
+        return __awaiter(this, void 0, void 0, function () {
+            var message;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.models.entity.getMessage(entityId, name)];
+                    case 1:
+                        message = _a.sent();
+                        if (!message) {
+                            return [2 /*return*/, responses_js_1.default.UNKNOWN_MSG_NAME];
+                        }
+                        return [4 /*yield*/, this.models.entity.setDefaultMessage(entityId, message)];
+                    case 2:
+                        _a.sent();
+                        return [2 /*return*/, responses_js_1.default.SET_MESSAGE];
+                }
+            });
+        });
+    };
+    MessageHandler.prototype.getMessageNames = function (entityId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var names, readableNames;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.models.entity.getMessageNames(entityId)];
+                    case 1:
+                        names = _a.sent();
+                        if (!names || !names.length) {
+                            return [2 /*return*/, responses_js_1.default.NO_NAMED_MESSAGES];
+                        }
+                        readableNames = names === null || names === void 0 ? void 0 : names.join(",\n");
+                        return [2 /*return*/, readableNames];
                 }
             });
         });

@@ -10,6 +10,7 @@ class Entity implements Document {
   contactName: string;
   contactNumber: string;
   lastCode: string;
+  messages: { [key: string]: string };
 }
 
 class EntityModel {
@@ -83,7 +84,7 @@ class EntityModel {
 
   async getDefaultMessage(entityId: string) {
     const entity = await this.collection
-      .findOne({ entityId })
+      .findOne({ entityId });
     return entity.defaultMessage;
   };
 
@@ -97,7 +98,7 @@ class EntityModel {
 
   async getLastCode(entityId: string) {
     const entity = await this.collection
-      .findOne({ entityId })
+      .findOne({ entityId });
     return entity.lastCode;
   };
 
@@ -107,6 +108,28 @@ class EntityModel {
       { $set: { lastCode: code } },
       { upsert: true }
     );
+  };
+
+  async getMessage(entityId: string, name: string) {
+    const entity = await this.collection
+      .findOne({ entityId });
+    return entity.messages?.[name];
+  };
+
+  async setMessage(entityId: string, name: string, message: string) {
+    return this.collection.updateOne(
+      { entityId },
+      { $set: { [`messages.${name}`]: message } },
+      { upsert: true }
+    );
+  };
+
+  async getMessageNames(entityId: string) {
+    const entity = await this.collection
+      .findOne({ entityId });
+      const messages = entity.messages || {};
+      const names =  Object.keys(messages);
+    return names;
   };
 };
 

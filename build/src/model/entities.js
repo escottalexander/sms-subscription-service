@@ -166,6 +166,48 @@ var EntityModel = /** @class */ (function () {
         });
     };
     ;
+    EntityModel.prototype.getMessage = function (entityId, name) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var entity;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.collection
+                            .findOne({ entityId: entityId })];
+                    case 1:
+                        entity = _b.sent();
+                        return [2 /*return*/, (_a = entity.messages) === null || _a === void 0 ? void 0 : _a[name]];
+                }
+            });
+        });
+    };
+    ;
+    EntityModel.prototype.setMessage = function (entityId, name, message) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                return [2 /*return*/, this.collection.updateOne({ entityId: entityId }, { $set: (_a = {}, _a["messages.".concat(name)] = message, _a) }, { upsert: true })];
+            });
+        });
+    };
+    ;
+    EntityModel.prototype.getMessageNames = function (entityId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var entity, messages, names;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.collection
+                            .findOne({ entityId: entityId })];
+                    case 1:
+                        entity = _a.sent();
+                        messages = entity.messages || {};
+                        names = Object.keys(messages);
+                        return [2 /*return*/, names];
+                }
+            });
+        });
+    };
+    ;
     return EntityModel;
 }());
 exports.EntityModel = EntityModel;

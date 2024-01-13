@@ -66,7 +66,7 @@ class MessageHandler {
   async decipherMessage(requestContext: { message: string; entity: WithId<Entity>; fromPhone?: string; fromPhoneNumberEntry?: WithId<PhoneNumber>; }, reqBody: { Body: string; From?: string; To?: string; }) {
     try {
       let { message, fromPhone, fromPhoneNumberEntry, entity } = requestContext;
-      const { entityId, accountPhoneNumber: entityPhone, campaignCodes } = entity;
+      const { entityId, accountPhoneNumber: entityPhone, campaignCodes = [] } = entity;
       message = message.toUpperCase().trim();
 
       // Handle STOP and START
@@ -107,6 +107,10 @@ class MessageHandler {
             // Valid campaign code from admin, send out messages
             const count = await this.handleDeliveryMessage(entityPhone, entityId, strCmd[1]);
             return responses.SEND_CODE.replace("%CODE%", strCmd[1]).replace("%COUNT%", count.toString());
+          } if (strCmd[0] === "SEND" && strCmd[1].includes("MESSAGE:") && campaignCodes.includes(strCmd[2])) {
+            // Valid campaign code from admin, send out messages
+            const messageName = strCmd[1].replace("MESSAGE:", "");
+            return await this.sendNamedMessage(entityPhone, entityId, messageName, strCmd[2]);
           } else if (strCmd[0] === "ADD") {
             // Add admin
             if (strCmd[1] === "ADMIN" && strCmd[2]) {
@@ -166,10 +170,39 @@ class MessageHandler {
             await this.setDefaultMessage(entityId, reqBody.Body);
             return responses.SET_MESSAGE;
           } else if (
+            strCmd[0] === "SET" &&
+            strCmd[1].includes("MESSAGE:") &&
+            strCmd[2]
+          ) {
+            const name = strCmd[1].replace("MESSAGE:", "");
+            await this.setMessage(entityId, name, reqBody.Body);
+            return responses.SET_NAMED_MESSAGE.replace("%NAME%", name);
+          } else if (
+            strCmd[0] === "SET" &&
+            strCmd[1] === "DEFAULT" &&
+            strCmd[2]
+          ) {
+            const message = await this.setDefaultMessageByName(entityId, strCmd[2]);
+            return message;
+          } else if (
+            strCmd[0] === "GET" &&
+            strCmd[1] === "MESSAGE" &&
+            strCmd[2] === "NAMES"
+          ) {
+            const message = await this.getMessageNames(entityId);
+            return message;
+          } else if (
             strCmd[0] === "GET" &&
             strCmd[1] === "MESSAGE"
           ) {
             const message = await this.getDefaultMessage(entityId);
+            return message;
+          } else if (
+            strCmd[0] === "GET" &&
+            strCmd[1].includes("MESSAGE:")
+          ) {
+            const name = strCmd[1].replace("MESSAGE:", "");
+            const message = await this.getMessage(entityId, name);
             return message;
           } else if (
             strCmd[0] === "GET" &&
@@ -246,6 +279,24 @@ class MessageHandler {
     return subscribers.length;
   };
 
+  async sendNamedMessage(entityPhone: string, entityId: string, messageName: string, campaignCode: string) {
+    // Valid campaign code from admin, send out messages
+    const message = await this.models.entity.getMessage(entityId, messageName);
+    if (!message) {
+      return responses.UNKNOWN_MSG_NAME;
+    }
+    const subscribers = await this.models.phoneNumber.findAllByCode({ entityId, campaignCode });
+
+    for (let sub of subscribers) {
+      const success = await messenger.send(entityPhone, sub.phoneNumber, message);
+      await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
+      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
+    }
+    await this.models.entity.setLastCode(entityId, campaignCode);
+    const count = subscribers.length;
+    return responses.NAMED_MESSAGE.replace("%COUNT%", count.toString()).replace("%NAME%", messageName);
+  };
+
   async setDefaultMessage(entityId: string, unparsedMessage: string) {
     // Remove first two commands from message
     const message = unparsedMessage.split(" ").splice(2).join(" ");
@@ -255,6 +306,35 @@ class MessageHandler {
   async getDefaultMessage(entityId: string) {
     const message = await this.models.entity.getDefaultMessage(entityId);
     return message;
+  };
+
+  async setMessage(entityId: string, name: string, unparsedMessage: string) {
+    // Remove first two commands from message
+    const message = unparsedMessage.split(" ").splice(2).join(" ");
+    await this.models.entity.setMessage(entityId, name, message);
+  };
+
+  async getMessage(entityId: string, name: string) {
+    const message = await this.models.entity.getMessage(entityId, name);
+    return message;
+  };
+
+  async setDefaultMessageByName(entityId: string, name: string) {
+    const message = await this.models.entity.getMessage(entityId, name);
+    if (!message) {
+      return responses.UNKNOWN_MSG_NAME;
+    }
+    await this.models.entity.setDefaultMessage(entityId, message);
+    return responses.SET_MESSAGE;
+  }
+
+  async getMessageNames(entityId: string) {
+    const names = await this.models.entity.getMessageNames(entityId);
+    if (!names || !names.length) {
+      return responses.NO_NAMED_MESSAGES;
+    }
+    const readableNames = names?.join(",\n");
+    return readableNames;
   };
 
   async getLastCode(entityId: string) {
