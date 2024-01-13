@@ -73,6 +73,7 @@ var entities_js_1 = require("../src/model/entities.js");
 var phoneNumbers_js_1 = require("../src/model/phoneNumbers.js");
 var messenger_js_1 = __importDefault(require("../src/services/messenger.js"));
 var reporting_js_1 = require("../src/model/reporting.js");
+var responses_js_1 = __importDefault(require("../src/server/responses.js"));
 var entity = {
     entityId: "00001",
     accountPhoneNumber: "+17777777777",
@@ -185,10 +186,11 @@ describe("decipherMessage", function () {
                     case 1:
                         response = _a.sent();
                         expect(createStub.calledOnceWithExactly({
-                            phoneNumber: "+9999999999",
+                            entityId: "00001",
+                            phoneNumber: "+19999999999",
                             isAdmin: true,
                             isActive: true,
-                        }));
+                        })).to.be.true;
                         expect(response).to.equal("Added '9999999999' as an admin.");
                         return [2 /*return*/];
                 }
@@ -238,9 +240,10 @@ describe("decipherMessage", function () {
                     case 1:
                         response = _a.sent();
                         expect(createStub.calledOnceWithExactly({
-                            phoneNumber: "+9999999999",
+                            entityId: "00001",
+                            phoneNumber: "+19999999999",
                             isAdmin: false,
-                        }));
+                        })).to.be.true;
                         expect(response).to.equal("Removed '9999999999' as an admin.");
                         return [2 /*return*/];
                 }
@@ -407,13 +410,278 @@ describe("decipherMessage", function () {
                     case 1:
                         response = _a.sent();
                         expect(response).to.equal("Default message has been set");
-                        expect(setMessageStub.calledOnceWithExactly("00001", "Hello world!"));
+                        expect(setMessageStub.calledOnceWithExactly("00001", "Hello world!")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.getDefaultMessage when message is GET MESSAGE", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getDefaultMessageStub.resolves("This is the default message");
+                        req = {
+                            Body: "GET MESSAGE",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("This is the default message");
+                        expect(getDefaultMessageStub.calledOnceWithExactly("00001")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.getLastCode when message is GET LAST CODE", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getLastCodeStub, req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getLastCodeStub = sinon.stub(entities_js_1.EntityModel.prototype, "getLastCode");
+                        getLastCodeStub.resolves("CODE");
+                        req = {
+                            Body: "GET LAST CODE",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("CODE");
+                        expect(getLastCodeStub.calledOnceWithExactly("00001")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.setMessage when message is SET MESSAGE:%NAME%", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var setMessageStub, req, reqCtx, response, req2, reqCtx2, response2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        setMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "setMessage");
+                        req = {
+                            Body: "SET MESSAGE:MSG1 This is message 1",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("Set new message with name: MSG1");
+                        expect(setMessageStub.calledOnceWithExactly("00001", "MSG1", "This is message 1")).to.be.true;
+                        setMessageStub.resetHistory();
+                        req2 = {
+                            Body: "SET MESSAGE:MSG2 This is message 2",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx2 = getRequestContext(req2, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx2, req2)];
+                    case 2:
+                        response2 = _a.sent();
+                        expect(response2).to.equal("Set new message with name: MSG2");
+                        expect(setMessageStub.calledOnceWithExactly("00001", "MSG2", "This is message 2")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.getMessage when message is GET MESSAGE:%NAME%", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getMessageStub, req, reqCtx, response, req2, reqCtx2, response2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "getMessage");
+                        getMessageStub.resolves("This is message 1");
+                        req = {
+                            Body: "GET MESSAGE:MSG1",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("This is message 1");
+                        expect(getMessageStub.calledOnceWithExactly("00001", "MSG1")).to.be.true;
+                        getMessageStub.resetHistory();
+                        getMessageStub.resolves("This is message 2");
+                        req2 = {
+                            Body: "GET MESSAGE:MSG2",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx2 = getRequestContext(req2, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx2, req2)];
+                    case 2:
+                        response2 = _a.sent();
+                        expect(response2).to.equal("This is message 2");
+                        expect(getMessageStub.calledOnceWithExactly("00001", "MSG2")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.getMessageNames when message is GET MESSAGE NAMES", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getMessageNamesStub, req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getMessageNamesStub = sinon.stub(entities_js_1.EntityModel.prototype, "getMessageNames");
+                        getMessageNamesStub.resolves(["MSG1", "MSG2", "MSG3", "MSG4"]);
+                        req = {
+                            Body: "GET MESSAGE NAMES",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("MSG1,\nMSG2,\nMSG3,\nMSG4");
+                        expect(getMessageNamesStub.calledOnceWithExactly("00001")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call EntityModel.setDefaultMessage when message is SET DEFAULT %NAME%", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getMessageStub, setDefaultMessageStub, req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "getMessage");
+                        getMessageStub.resolves("This is message 1");
+                        setDefaultMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "setDefaultMessage");
+                        req = {
+                            Body: "SET DEFAULT MSG1",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal(responses_js_1.default.SET_MESSAGE);
+                        expect(getMessageStub.calledOnceWithExactly("00001", "MSG1")).to.be.true;
+                        expect(setDefaultMessageStub.calledOnceWithExactly("00001", "This is message 1")).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call return error when message name does not exist for is SET DEFAULT %NAME%", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getMessageStub, setDefaultMessageStub, req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "getMessage");
+                        getMessageStub.resolves(undefined);
+                        setDefaultMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "setDefaultMessage");
+                        req = {
+                            Body: "SET DEFAULT MSG1",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal(responses_js_1.default.UNKNOWN_MSG_NAME);
+                        expect(getMessageStub.calledOnceWithExactly("00001", "MSG1")).to.be.true;
+                        expect(setDefaultMessageStub.notCalled).to.be.true;
+                        return [2 /*return*/];
+                }
+            });
+        }); });
+        it("should call handleDeliveryMessage and use named message when message is a campaign code", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var findAllStub, getMessageStub, req, reqCtx;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        findAllStub = sinon.stub(phoneNumbers_js_1.PhoneNumberModel.prototype, "findAllByCode");
+                        findAllStub.resolves([
+                            {
+                                phoneNumber: "+1234567890",
+                                campaignCode: "LOC1",
+                                isAdmin: false,
+                            },
+                            {
+                                phoneNumber: "+2234567890",
+                                campaignCode: "LOC1",
+                                isAdmin: false,
+                            },
+                            {
+                                phoneNumber: "+3234567890",
+                                campaignCode: "LOC1",
+                                isAdmin: false,
+                            },
+                        ]);
+                        getMessageStub = sinon.stub(entities_js_1.EntityModel.prototype, "getMessage");
+                        getMessageStub.resolves("This is message 1");
+                        req = {
+                            Body: "SEND MESSAGE:MSG1 LOC1",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        _a.sent();
+                        expect(findAllStub.calledOnceWithExactly({ entityId: "00001", campaignCode: "LOC1" }));
+                        expect(getMessageStub.calledOnceWithExactly("00001", "MSG1"));
+                        expect(sendStub.callCount).to.equal(3);
+                        expect(sendStub.calledWith("+1234567890", "This is message 1"));
+                        expect(sendStub.calledWith("+2234567890", "This is message 1"));
+                        expect(sendStub.calledWith("+3234567890", "This is message 1"));
                         return [2 /*return*/];
                 }
             });
         }); });
         it("should send message back to admin when message is not recognized", function () { return __awaiter(void 0, void 0, void 0, function () {
-            var req, reqCtx;
+            var req, reqCtx, response;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -429,8 +697,8 @@ describe("decipherMessage", function () {
                         });
                         return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
                     case 1:
-                        _a.sent();
-                        expect(sendStub.calledOnceWithExactly("+1234567890", "I don't recognize that instruction... is there a typo?"));
+                        response = _a.sent();
+                        expect(response).to.equal(responses_js_1.default.UNKNOWN);
                         return [2 /*return*/];
                 }
             });
@@ -442,7 +710,7 @@ describe("decipherMessage", function () {
             findByPhoneNumberStub.resolves();
         });
         it("should add phone number to database and send confirmation when sent valid campaign code", function () { return __awaiter(void 0, void 0, void 0, function () {
-            var req, reqCtx;
+            var req, reqCtx, response;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -454,18 +722,20 @@ describe("decipherMessage", function () {
                         reqCtx = getRequestContext(req);
                         return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
                     case 1:
-                        _a.sent();
+                        response = _a.sent();
                         expect(createStub.calledOnceWithExactly({
+                            entityId: "00001",
                             phoneNumber: "+15555555555",
                             campaignCode: "LOC1",
-                        }));
-                        expect(sendStub.calledOnceWithExactly("+15555555555", "You have been signed up to receive notifications. If at any point you want to stop receiving messages, text STOP"));
+                            isActive: true,
+                        })).to.be.true;
+                        expect(response).to.equal(responses_js_1.default.VALID_CAMPAIGN_CODE);
                         return [2 /*return*/];
                 }
             });
         }); });
         it("should send unrecognized code message when message is not valid", function () { return __awaiter(void 0, void 0, void 0, function () {
-            var req, reqCtx;
+            var req, reqCtx, response;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -477,9 +747,9 @@ describe("decipherMessage", function () {
                         reqCtx = getRequestContext(req);
                         return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
                     case 1:
-                        _a.sent();
+                        response = _a.sent();
                         expect(createStub.callCount).to.equal(0);
-                        expect(sendStub.calledOnceWithExactly("We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ".concat(support_number_numan_readable, " explaining the problem.")));
+                        expect(response).to.equal(responses_js_1.default.UNKNOWN);
                         return [2 /*return*/];
                 }
             });
@@ -534,16 +804,18 @@ describe("decipherMessage", function () {
                         return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
                     case 1:
                         _a.sent();
-                        expect(removeStub.calledOnceWithExactly({
+                        expect(createStub.calledOnceWithExactly({
+                            entityId: "00001",
                             phoneNumber: "+14444444444",
-                        }));
-                        expect(sendStub.calledOnceWithExactly("+14444444444", "Unsubscribe successful. You will no longer receive notifications."));
+                            isActive: false,
+                        })).to.be.true;
+                        expect(sendStub.notCalled).to.be.true;
                         return [2 /*return*/];
                 }
             });
         }); });
         it("should send unrecognized code message when message is not valid", function () { return __awaiter(void 0, void 0, void 0, function () {
-            var req, reqCtx;
+            var req, reqCtx, response;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -559,9 +831,10 @@ describe("decipherMessage", function () {
                         });
                         return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
                     case 1:
-                        _a.sent();
+                        response = _a.sent();
                         expect(createStub.callCount).to.equal(0);
-                        expect(sendStub.calledOnceWithExactly("We can't recognize that code. Please correct if it contains a typo. If you believe it to be correct please send a message to ".concat(support_number_numan_readable, " explaining the problem.")));
+                        expect(sendStub.notCalled).to.be.true;
+                        expect(response).to.equal(responses_js_1.default.UNKNOWN);
                         return [2 /*return*/];
                 }
             });

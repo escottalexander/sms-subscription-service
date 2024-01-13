@@ -8,7 +8,6 @@ import messenger from "../src/services/messenger.js";
 import responses from "../src/server/responses.js";
 import { WithId } from "mongodb";
 import { Entity } from "../src/model/entities.js";
-import { Request, Response } from "express";
 import { mockRequest, mockResponse } from 'mock-req-res';
 import { twiml } from "twilio/lib";
 const { MessagingResponse } = twiml;
@@ -32,18 +31,16 @@ const twimlResponse = (message: string) => {
   return twimlRes.toString();
 };
 async function init() {
-  // Drop all records in db
-  try {
-    const db = await connect();
-    messageHandler = new MessageHandler(db);
-    await db.collection("phone-numbers").drop();
-    await db.collection("reporting-daily").drop();
-    await db.collection("state").drop();
-    await db.collection("entities").drop();
-  } catch (err) {
-    console.log("No collections to drop, continuing...");
+  const db = await connect();
+  messageHandler = new MessageHandler(db);
+  const dbs = ["phone-numbers", "reporting-daily", "entities", "state"];
+  for (const dbName of dbs) {
+    try {
+      await db.collection(dbName).drop();
+    } catch (err) {
+      console.log(`No ${dbName} collection to drop, continuing...`);
+    }
   }
-  
 
   // Create an entity to test with
   await messageHandler.models.entity.createOrUpdate({
@@ -85,7 +82,20 @@ describe("Core Logic", () => {
 
     const setting = await messageHandler.models.entity.getDefaultMessage(entityId as string);
     expect(setting).to.equal("Hello world!");
-    expect(response.send.calledOnceWith(twimlResponse(responses.SET_MESSAGE)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.SET_MESSAGE))).to.be.true;
+  });
+
+  it("should get an entity's default message when called by an admin with GET MESSAGE", async () => {
+    const message = {
+      Body: "GET MESSAGE",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const defaultMessage = await messageHandler.models.entity.getDefaultMessage(entityId as string);
+    expect(response.send.calledOnceWith(twimlResponse(defaultMessage))).to.be.true;
   });
 
   it("should add a code when it receives ADD CODE from admin", async () => {
@@ -99,7 +109,7 @@ describe("Core Logic", () => {
 
     const codes = await messageHandler.models.entity.getCampaignCodes(entityId as string);
     expect(codes.includes("TEST"));
-    expect(response.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST")))).to.be.true;
   });
 
   it("should add multiple codes when it receives different codes with ADD CODE from admin", async () => {
@@ -122,8 +132,8 @@ describe("Core Logic", () => {
     const codes = await messageHandler.models.entity.getCampaignCodes(entityId as string);
     expect(codes.includes("TEST1"));
     expect(codes.includes("TEST2"));
-    expect(response1.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST1"))));
-    expect(response2.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST2"))));
+    expect(response1.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST1")))).to.be.true;
+    expect(response2.send.calledOnceWith(twimlResponse(responses.ADD_CODE.replace("%CODE%", "TEST2")))).to.be.true;
   });
 
   it("should add a subscriber when non-admin sends a code", async () => {
@@ -139,7 +149,7 @@ describe("Core Logic", () => {
       entityId: entityId as string, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
-    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE))).to.be.true;
   });
 
   it("should add a subscriber when non-admin sends a code with extra whitespace", async () => {
@@ -155,7 +165,7 @@ describe("Core Logic", () => {
       entityId: entityId as string, phoneNumber: normalUser.phoneNumber,
     });
     expect(user).to.exist;
-    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE))).to.be.true;
   });
 
   it("should send a message to subscriber when SEND CODE is sent by admin", async () => {
@@ -167,7 +177,7 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", "1"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", "1")))).to.be.true;
 
     expect(
       sendStub.calledWithExactly(
@@ -186,10 +196,10 @@ describe("Core Logic", () => {
     const response = buildResponse(); 
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "1"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "1")))).to.be.true;
 
-    expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
-    expect(!sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
+    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+    expect(!sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
   });
 
   it("should send a message to all when CUSTOM ALL is sent by admin", async () => {
@@ -201,10 +211,179 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "2"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "2")))).to.be.true;
 
-    expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
-    expect(sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
+    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+  });
+
+  it("should return an error when message name is not known", async () => {
+    const message = {
+      Body: "send message:frankfurter test",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN_MSG_NAME))).to.be.true;
+
+    expect(
+      sendStub.notCalled
+    );
+  });
+
+  it("should return all message names when GET MESSAGE NAMES is sent by admin", async () => {
+    const message = {
+      Body: "get message names",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+    expect(response.send.calledOnceWith(twimlResponse(responses.NO_NAMED_MESSAGES))).to.be.true;
+    
+    const message2 = {
+      Body: "set message:NAME Hello to the world!",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+    expect(response2.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+
+    const message3 = {
+      Body: "set message:OTHER Hello to the world!",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response3 = buildResponse();
+    await messageHandler.handle(buildRequest(message3), response3);
+    expect(response3.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "OTHER")))).to.be.true;
+
+    const message4 = {
+      Body: "get message names",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response4 = buildResponse();
+    await messageHandler.handle(buildRequest(message4), response4);
+    expect(response4.send.calledOnceWith(twimlResponse("NAME,\nOTHER"))).to.be.true;
+  });
+
+  it("should set a message when called by an admin with SET DEFAULT %NAME%", async () => {
+    // Set a named message
+    const message = {
+      Body: "SET MESSAGE:MSG1 Hello world!",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const message2 = {
+      Body: "SET DEFAULT MSG1",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+
+    const setting = await messageHandler.models.entity.getDefaultMessage(entityId as string);
+    expect(setting).to.equal("Hello world!");
+    expect(response2.send.calledOnceWith(twimlResponse(responses.SET_MESSAGE))).to.be.true;
+  });
+
+  it("should return an error when sent an unknown message name when SET DEFAULT %NAME% is called", async () => {
+    const message2 = {
+      Body: "SET DEFAULT UNKNOWN",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+
+    expect(response2.send.calledOnceWith(twimlResponse(responses.UNKNOWN_MSG_NAME))).to.be.true;
+  });
+
+  it("should set a named message when SET MESSAGE:%NAME% %MESSAGE% is sent by admin", async () => {
+    const message = {
+      Body: "set message:NAME Hello to the world!",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+    expect(response.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+
+    const namedMessage = await messageHandler.models.entity.getMessage(entityId as string, "NAME");
+    expect(namedMessage).to.equal("Hello to the world!");
+  });
+
+  it("should send a message to subscriber when SEND MESSAGE:%NAME% CODE is sent by admin", async () => {
+    const message = {
+      Body: "set message:NAME Hello to the world!",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+    expect(response.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+
+    const message2 = {
+      Body: "send message:name test",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+
+    expect(response2.send.calledOnceWith(twimlResponse(responses.NAMED_MESSAGE.replace("%NAME%", "NAME").replace("%COUNT%", "1")))).to.be.true;
+
+    const namedMessage = await messageHandler.models.entity.getMessage(entityId as string, "NAME");
+    expect(
+      sendStub.calledWithExactly(
+        normalUser.phoneNumber,
+        namedMessage
+      )
+    );
+  });
+
+  it("should set an entity's last code when an admin sends a campaign", async () => {
+    const message = {
+      Body: "SEND TEST1",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(lastCode).to.equal("TEST1");
+
+    const message2 = {
+      Body: "SEND TEST2",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+
+    const lastCode2 = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(lastCode2).to.equal("TEST2");
+  });
+
+  it("should get an entity's last code when called by an admin with GET LAST CODE", async () => {
+    const message = {
+      Body: "GET LAST CODE",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(response.send.calledOnceWith(twimlResponse(lastCode))).to.be.true;
   });
 
   it("should add an admin as a subscriber when they send a code", async () => {
@@ -221,7 +400,7 @@ describe("Core Logic", () => {
     });
     expect(adminUser).to.exist;
     expect(adminUser?.campaignCode).to.equal("TEST");
-    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.VALID_CAMPAIGN_CODE))).to.be.true;
   });
 
   it("should change a code when it receives CHANGE CODE from admin", async () => {
@@ -237,10 +416,11 @@ describe("Core Logic", () => {
     const codes = await messageHandler.models.entity.getCampaignCodes(entityId as string);
     expect(!codes.includes("TEST"));
     expect(codes.includes("CHANGEDTEST"));
-    expect(response.send.calledOnceWith(responses.CHANGE_CODE.replace("%CODE1%", "TEST").replace(
+    const result = responses.CHANGE_CODE.replace("%CODE1%", "TEST").replace(
       "%CODE2%",
       "CHANGEDTEST"
-    )));
+    )
+    expect(response.send.calledOnceWith(twimlResponse(result))).to.be.true;
 
     // Make sure it updated user with that code
     const user = await messageHandler.models.phoneNumber.findByPhoneNumber({
@@ -262,7 +442,7 @@ describe("Core Logic", () => {
     // Make sure it removed code
     const codes = await messageHandler.models.entity.getCampaignCodes(entityId as string);
     expect(!codes.includes("CHANGEDTEST"));
-    expect(response.send.calledOnceWith(twimlResponse(responses.REMOVE_CODE.replace("%CODE%", "CHANGEDTEST"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.REMOVE_CODE.replace("%CODE%", "CHANGEDTEST")))).to.be.true;
 
     // Make sure it updated user with that code
     const user = await messageHandler.models.phoneNumber.findByPhoneNumber({
@@ -285,7 +465,7 @@ describe("Core Logic", () => {
       entityId: entityId as string, phoneNumber: "+11000031337",
     });
     expect(newAdmin).to.exist;
-    expect(response.send.calledOnceWith(twimlResponse(responses.ADD_ADMIN.replace("%PHONE%", "(100)003-1337"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.ADD_ADMIN.replace("%PHONE%", "(100)003-1337")))).to.be.true;
   });
 
   it("should send error when ADD ADMIN can't parse phone", async () => {
@@ -301,7 +481,7 @@ describe("Core Logic", () => {
       entityId: entityId as string, phoneNumber: "+11000013117",
     });
     expect(newAdmin).to.not.exist;
-    expect(response.send.calledOnceWith(twimlResponse(responses.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337")))).to.be.true;
 
   });
 
@@ -319,7 +499,7 @@ describe("Core Logic", () => {
     });
     expect(notAdmin).to.exist;
     expect(notAdmin?.isAdmin).to.be.false;
-    expect(response.send.calledOnceWith(twimlResponse(responses.REMOVE_ADMIN.replace("%PHONE%", "(100)003-1337"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.REMOVE_ADMIN.replace("%PHONE%", "(100)003-1337")))).to.be.true;
 
   });
 
@@ -332,7 +512,7 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337"))));
+    expect(response.send.calledOnceWith(twimlResponse(responses.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337")))).to.be.true;
   });
 
   it("should return RUNNING when STATUS is called", async () => {
@@ -344,7 +524,7 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.STATUS)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.STATUS))).to.be.true;
   });
 
   it("should return message when SHUTDOWN is called", async () => {
@@ -356,7 +536,7 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.SHUTDOWN)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.SHUTDOWN))).to.be.true;
   });
 
   it("should set admin user to inactive when they send STOP", async () => {
@@ -451,8 +631,8 @@ describe("Core Logic", () => {
     };
     const adminResponse = buildResponse();
     await messageHandler.handle(buildRequest(adminMessage), adminResponse);
-
-    expect(adminResponse.send.calledOnceWith(responses.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", "0")));
+    const result = responses.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", "0");
+    expect(adminResponse.send.calledOnceWith(twimlResponse(result))).to.be.true;
     expect(sendStub.callCount).to.equal(0);
 
     const start = {
@@ -475,7 +655,7 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    expect(response.send.calledOnceWith(twimlResponse(responses.ERROR)));
+    expect(response.send.calledOnceWith(twimlResponse(responses.ERROR))).to.be.true;
   });
 
   describe("admin sending unknown or incomplete commands", function () {
@@ -502,7 +682,7 @@ describe("Core Logic", () => {
         };
         const response = buildResponse();
         await messageHandler.handle(buildRequest(message), response);
-        expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN)));
+        expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN))).to.be.true;
       });
     });
   });
@@ -529,7 +709,7 @@ describe("Core Logic", () => {
         };
         const response = buildResponse();
         await messageHandler.handle(buildRequest(message), response);
-        expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN)));
+        expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN))).to.be.true;
       });
     });
   });

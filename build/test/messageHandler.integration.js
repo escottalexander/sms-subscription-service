@@ -58,6 +58,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -91,33 +102,49 @@ var twimlResponse = function (message) {
 };
 function init() {
     return __awaiter(this, void 0, void 0, function () {
-        var db, err_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 6, , 7]);
-                    return [4 /*yield*/, (0, mongodb_js_1.default)()];
+        var db, dbs, dbs_1, dbs_1_1, dbName, err_1, e_1_1;
+        var e_1, _a;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, (0, mongodb_js_1.default)()];
                 case 1:
-                    db = _a.sent();
+                    db = _b.sent();
                     messageHandler = new messageHandler_js_1.default(db);
-                    return [4 /*yield*/, db.collection("phone-numbers").drop()];
+                    dbs = ["phone-numbers", "reporting-daily", "entities", "state"];
+                    _b.label = 2;
                 case 2:
-                    _a.sent();
-                    return [4 /*yield*/, db.collection("reporting-daily").drop()];
+                    _b.trys.push([2, 9, 10, 11]);
+                    dbs_1 = __values(dbs), dbs_1_1 = dbs_1.next();
+                    _b.label = 3;
                 case 3:
-                    _a.sent();
-                    return [4 /*yield*/, db.collection("state").drop()];
+                    if (!!dbs_1_1.done) return [3 /*break*/, 8];
+                    dbName = dbs_1_1.value;
+                    _b.label = 4;
                 case 4:
-                    _a.sent();
-                    return [4 /*yield*/, db.collection("entities").drop()];
+                    _b.trys.push([4, 6, , 7]);
+                    return [4 /*yield*/, db.collection(dbName).drop()];
                 case 5:
-                    _a.sent();
+                    _b.sent();
                     return [3 /*break*/, 7];
                 case 6:
-                    err_1 = _a.sent();
-                    console.log("No collections to drop, continuing...");
+                    err_1 = _b.sent();
+                    console.log("No ".concat(dbName, " collection to drop, continuing..."));
                     return [3 /*break*/, 7];
-                case 7: 
+                case 7:
+                    dbs_1_1 = dbs_1.next();
+                    return [3 /*break*/, 3];
+                case 8: return [3 /*break*/, 11];
+                case 9:
+                    e_1_1 = _b.sent();
+                    e_1 = { error: e_1_1 };
+                    return [3 /*break*/, 11];
+                case 10:
+                    try {
+                        if (dbs_1_1 && !dbs_1_1.done && (_a = dbs_1.return)) _a.call(dbs_1);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                    return [7 /*endfinally*/];
+                case 11: 
                 // Create an entity to test with
                 return [4 /*yield*/, messageHandler.models.entity.createOrUpdate({
                         entityId: "00001",
@@ -127,18 +154,18 @@ function init() {
                         contactName: "Test Contact",
                         contactNumber: "+18888888888",
                     })];
-                case 8:
+                case 12:
                     // Create an entity to test with
-                    _a.sent();
+                    _b.sent();
                     return [4 /*yield*/, messageHandler.models.entity.findByPhoneNumber("+17777777777")];
-                case 9:
-                    entity = _a.sent();
+                case 13:
+                    entity = _b.sent();
                     entityId = entity === null || entity === void 0 ? void 0 : entity.entityId;
                     // Create an admin to test with
                     return [4 /*yield*/, messageHandler.models.phoneNumber.createOrUpdate(admin)];
-                case 10:
+                case 14:
                     // Create an admin to test with
-                    _a.sent();
+                    _b.sent();
                     // Stub out shutdown function so it doesn't stop the tests XD
                     sinon.stub(messageHandler, "shutDownProcess").resolves();
                     return [2 /*return*/];
@@ -174,7 +201,29 @@ describe("Core Logic", function () {
                 case 2:
                     setting = _a.sent();
                     expect(setting).to.equal("Hello world!");
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_MESSAGE)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_MESSAGE))).to.be.true;
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should get an entity's default message when called by an admin with GET MESSAGE", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, defaultMessage;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "GET MESSAGE",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getDefaultMessage(entityId)];
+                case 2:
+                    defaultMessage = _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(defaultMessage))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -197,7 +246,7 @@ describe("Core Logic", function () {
                 case 2:
                     codes = _a.sent();
                     expect(codes.includes("TEST"));
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -230,8 +279,8 @@ describe("Core Logic", function () {
                     codes = _a.sent();
                     expect(codes.includes("TEST1"));
                     expect(codes.includes("TEST2"));
-                    expect(response1.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST1"))));
-                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST2"))));
+                    expect(response1.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST1")))).to.be.true;
+                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_CODE.replace("%CODE%", "TEST2")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -256,7 +305,7 @@ describe("Core Logic", function () {
                 case 2:
                     user = _a.sent();
                     expect(user).to.exist;
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -281,7 +330,7 @@ describe("Core Logic", function () {
                 case 2:
                     user = _a.sent();
                     expect(user).to.exist;
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -300,7 +349,7 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", "1"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", "1")))).to.be.true;
                     expect(sendStub.calledWithExactly(normalUser.phoneNumber, responses_js_1.default.DEFAULT_MESSAGE));
                     return [2 /*return*/];
             }
@@ -320,9 +369,9 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.CUSTOM_MESSAGE.replace("%COUNT%", "1"))));
-                    expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
-                    expect(!sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.CUSTOM_MESSAGE.replace("%COUNT%", "1")))).to.be.true;
+                    expect(sendStub.calledWithExactly(entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+                    expect(!sendStub.calledWithExactly(entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -341,9 +390,242 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.CUSTOM_MESSAGE.replace("%COUNT%", "2"))));
-                    expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
-                    expect(sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.CUSTOM_MESSAGE.replace("%COUNT%", "2")))).to.be.true;
+                    expect(sendStub.calledWithExactly(entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+                    expect(sendStub.calledWithExactly(entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should return an error when message name is not known", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "send message:frankfurter test",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN_MSG_NAME))).to.be.true;
+                    expect(sendStub.notCalled);
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should return all message names when GET MESSAGE NAMES is sent by admin", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, message2, response2, message3, response3, message4, response4;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "get message names",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.NO_NAMED_MESSAGES))).to.be.true;
+                    message2 = {
+                        Body: "set message:NAME Hello to the world!",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 2:
+                    _a.sent();
+                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+                    message3 = {
+                        Body: "set message:OTHER Hello to the world!",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response3 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message3), response3)];
+                case 3:
+                    _a.sent();
+                    expect(response3.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_NAMED_MESSAGE.replace("%NAME%", "OTHER")))).to.be.true;
+                    message4 = {
+                        Body: "get message names",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response4 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message4), response4)];
+                case 4:
+                    _a.sent();
+                    expect(response4.send.calledOnceWith(twimlResponse("NAME,\nOTHER"))).to.be.true;
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should set a message when called by an admin with SET DEFAULT %NAME%", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, message2, response2, setting;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "SET MESSAGE:MSG1 Hello world!",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    message2 = {
+                        Body: "SET DEFAULT MSG1",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 2:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getDefaultMessage(entityId)];
+                case 3:
+                    setting = _a.sent();
+                    expect(setting).to.equal("Hello world!");
+                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_MESSAGE))).to.be.true;
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should return an error when sent an unknown message name when SET DEFAULT %NAME% is called", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message2, response2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message2 = {
+                        Body: "SET DEFAULT UNKNOWN",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 1:
+                    _a.sent();
+                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN_MSG_NAME))).to.be.true;
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should set a named message when SET MESSAGE:%NAME% %MESSAGE% is sent by admin", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, namedMessage;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "set message:NAME Hello to the world!",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+                    return [4 /*yield*/, messageHandler.models.entity.getMessage(entityId, "NAME")];
+                case 2:
+                    namedMessage = _a.sent();
+                    expect(namedMessage).to.equal("Hello to the world!");
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should send a message to subscriber when SEND MESSAGE:%NAME% CODE is sent by admin", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, message2, response2, namedMessage;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "set message:NAME Hello to the world!",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+                    message2 = {
+                        Body: "send message:name test",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 2:
+                    _a.sent();
+                    expect(response2.send.calledOnceWith(twimlResponse(responses_js_1.default.NAMED_MESSAGE.replace("%NAME%", "NAME").replace("%COUNT%", "1")))).to.be.true;
+                    return [4 /*yield*/, messageHandler.models.entity.getMessage(entityId, "NAME")];
+                case 3:
+                    namedMessage = _a.sent();
+                    expect(sendStub.calledWithExactly(normalUser.phoneNumber, namedMessage));
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should set an entity's last code when an admin sends a campaign", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, lastCode, message2, response2, lastCode2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "SEND TEST1",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 2:
+                    lastCode = _a.sent();
+                    expect(lastCode).to.equal("TEST1");
+                    message2 = {
+                        Body: "SEND TEST2",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 3:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 4:
+                    lastCode2 = _a.sent();
+                    expect(lastCode2).to.equal("TEST2");
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should get an entity's last code when called by an admin with GET LAST CODE", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, lastCode;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "GET LAST CODE",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 2:
+                    lastCode = _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(lastCode))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -369,13 +651,13 @@ describe("Core Logic", function () {
                     adminUser = _a.sent();
                     expect(adminUser).to.exist;
                     expect(adminUser === null || adminUser === void 0 ? void 0 : adminUser.campaignCode).to.equal("TEST");
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.VALID_CAMPAIGN_CODE))).to.be.true;
                     return [2 /*return*/];
             }
         });
     }); });
     it("should change a code when it receives CHANGE CODE from admin", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var message, response, codes, user;
+        var message, response, codes, result, user;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -393,7 +675,8 @@ describe("Core Logic", function () {
                     codes = _a.sent();
                     expect(!codes.includes("TEST"));
                     expect(codes.includes("CHANGEDTEST"));
-                    expect(response.send.calledOnceWith(responses_js_1.default.CHANGE_CODE.replace("%CODE1%", "TEST").replace("%CODE2%", "CHANGEDTEST")));
+                    result = responses_js_1.default.CHANGE_CODE.replace("%CODE1%", "TEST").replace("%CODE2%", "CHANGEDTEST");
+                    expect(response.send.calledOnceWith(twimlResponse(result))).to.be.true;
                     return [4 /*yield*/, messageHandler.models.phoneNumber.findByPhoneNumber({
                             entityId: entityId, phoneNumber: normalUser.phoneNumber,
                         })];
@@ -423,7 +706,7 @@ describe("Core Logic", function () {
                 case 2:
                     codes = _a.sent();
                     expect(!codes.includes("CHANGEDTEST"));
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.REMOVE_CODE.replace("%CODE%", "CHANGEDTEST"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.REMOVE_CODE.replace("%CODE%", "CHANGEDTEST")))).to.be.true;
                     return [4 /*yield*/, messageHandler.models.phoneNumber.findByPhoneNumber({
                             entityId: entityId, phoneNumber: normalUser.phoneNumber,
                         })];
@@ -455,7 +738,7 @@ describe("Core Logic", function () {
                 case 2:
                     newAdmin = _a.sent();
                     expect(newAdmin).to.exist;
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_ADMIN.replace("%PHONE%", "(100)003-1337"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ADD_ADMIN.replace("%PHONE%", "(100)003-1337")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -480,7 +763,7 @@ describe("Core Logic", function () {
                 case 2:
                     newAdmin = _a.sent();
                     expect(newAdmin).to.not.exist;
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -506,7 +789,7 @@ describe("Core Logic", function () {
                     notAdmin = _a.sent();
                     expect(notAdmin).to.exist;
                     expect(notAdmin === null || notAdmin === void 0 ? void 0 : notAdmin.isAdmin).to.be.false;
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.REMOVE_ADMIN.replace("%PHONE%", "(100)003-1337"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.REMOVE_ADMIN.replace("%PHONE%", "(100)003-1337")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -525,7 +808,7 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337"))));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.FAILED_PARSE_PHONE.replace("%PHONE%", "(1X0)0X3-1337")))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -544,7 +827,7 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.STATUS)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.STATUS))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -563,7 +846,7 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SHUTDOWN)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.SHUTDOWN))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -676,7 +959,7 @@ describe("Core Logic", function () {
         });
     }); });
     it("should not send a message to inactive subscriber when SEND CODE is sent by admin", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var subscribe, stop, adminMessage, adminResponse, start;
+        var subscribe, stop, adminMessage, adminResponse, result, start;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -705,7 +988,8 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(adminMessage), adminResponse)];
                 case 3:
                     _a.sent();
-                    expect(adminResponse.send.calledOnceWith(responses_js_1.default.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", "0")));
+                    result = responses_js_1.default.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", "0");
+                    expect(adminResponse.send.calledOnceWith(twimlResponse(result))).to.be.true;
                     expect(sendStub.callCount).to.equal(0);
                     start = {
                         Body: "start",
@@ -736,7 +1020,7 @@ describe("Core Logic", function () {
                     return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                 case 1:
                     _a.sent();
-                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ERROR)));
+                    expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.ERROR))).to.be.true;
                     return [2 /*return*/];
             }
         });
@@ -772,7 +1056,7 @@ describe("Core Logic", function () {
                             return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                         case 1:
                             _a.sent();
-                            expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN)));
+                            expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN))).to.be.true;
                             return [2 /*return*/];
                     }
                 });
@@ -808,7 +1092,7 @@ describe("Core Logic", function () {
                             return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
                         case 1:
                             _a.sent();
-                            expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN)));
+                            expect(response.send.calledOnceWith(twimlResponse(responses_js_1.default.UNKNOWN))).to.be.true;
                             return [2 /*return*/];
                     }
                 });
