@@ -335,6 +335,28 @@ describe("decipherMessage", () => {
       );
     });
 
+    it("should call EntityModel.getLastCode when message is GET LAST CODE", async () => {
+      const getLastCodeStub = sinon.stub(EntityModel.prototype, "getLastCode");
+      getLastCodeStub.resolves("CODE");
+      const req = {
+        Body: "GET LAST CODE",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal("CODE");
+      expect(
+        getLastCodeStub.calledOnceWithExactly("00001")
+      );
+    });
+
     it("should send message back to admin when message is not recognized", async () => {
 
       const req = {

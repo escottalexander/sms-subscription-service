@@ -437,6 +437,32 @@ describe("decipherMessage", function () {
                 }
             });
         }); });
+        it("should call EntityModel.getLastCode when message is GET LAST CODE", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var getLastCodeStub, req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getLastCodeStub = sinon.stub(entities_js_1.EntityModel.prototype, "getLastCode");
+                        getLastCodeStub.resolves("CODE");
+                        req = {
+                            Body: "GET LAST CODE",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("CODE");
+                        expect(getLastCodeStub.calledOnceWithExactly("00001"));
+                        return [2 /*return*/];
+                }
+            });
+        }); });
         it("should send message back to admin when message is not recognized", function () { return __awaiter(void 0, void 0, void 0, function () {
             var req, reqCtx;
             return __generator(this, function (_a) {

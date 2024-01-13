@@ -143,6 +143,29 @@ var EntityModel = /** @class */ (function () {
         });
     };
     ;
+    EntityModel.prototype.getLastCode = function (entityId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var entity;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.collection
+                            .findOne({ entityId: entityId })];
+                    case 1:
+                        entity = _a.sent();
+                        return [2 /*return*/, entity.lastCode];
+                }
+            });
+        });
+    };
+    ;
+    EntityModel.prototype.setLastCode = function (entityId, code) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.collection.updateOne({ entityId: entityId }, { $set: { lastCode: code } }, { upsert: true })];
+            });
+        });
+    };
+    ;
     return EntityModel;
 }());
 exports.EntityModel = EntityModel;

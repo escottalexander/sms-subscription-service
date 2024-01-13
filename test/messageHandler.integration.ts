@@ -8,7 +8,6 @@ import messenger from "../src/services/messenger.js";
 import responses from "../src/server/responses.js";
 import { WithId } from "mongodb";
 import { Entity } from "../src/model/entities.js";
-import { Request, Response } from "express";
 import { mockRequest, mockResponse } from 'mock-req-res';
 import { twiml } from "twilio/lib";
 const { MessagingResponse } = twiml;
@@ -218,6 +217,43 @@ describe("Core Logic", () => {
 
     expect(sendStub.calledWithExactly(normalUser.phoneNumber, "Hello world!"));
     expect(sendStub.calledWithExactly(admin.phoneNumber, "Hello world!"));
+  });
+
+  it("should set an entity's last code when an admin sends a campaign", async () => {
+    const message = {
+      Body: "SEND TEST1",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(lastCode).to.equal("TEST1");
+
+    const message2 = {
+      Body: "SEND TEST2",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response2 = buildResponse();
+    await messageHandler.handle(buildRequest(message2), response2);
+
+    const lastCode2 = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(lastCode2).to.equal("TEST2");
+  });
+
+  it("should get an entity's last code when called by an admin with GET LAST CODE", async () => {
+    const message = {
+      Body: "GET LAST CODE",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
+    expect(response.send.calledOnceWith(twimlResponse(lastCode)));
   });
 
   it("should add an admin as a subscriber when they send a code", async () => {

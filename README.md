@@ -21,6 +21,7 @@ For admin users, they can use these commands in addition:
 - `SET MESSAGE %MESSAGE%` - Set the default message that is sent to subscribers.
 - `GET MESSAGE` - Get the default message.
 - `CUSTOM %CODE OR ALL% %MESSAGE%` - To send a custom message to either a specific campaign or use ALL to send to entire list.
+- `GET LAST CODE` - To view the last subscription code used to send messages.
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
 

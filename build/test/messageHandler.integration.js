@@ -370,6 +370,63 @@ describe("Core Logic", function () {
             }
         });
     }); });
+    it("should set an entity's last code when an admin sends a campaign", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, lastCode, message2, response2, lastCode2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "SEND TEST1",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 2:
+                    lastCode = _a.sent();
+                    expect(lastCode).to.equal("TEST1");
+                    message2 = {
+                        Body: "SEND TEST2",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response2 = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message2), response2)];
+                case 3:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 4:
+                    lastCode2 = _a.sent();
+                    expect(lastCode2).to.equal("TEST2");
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should get an entity's last code when called by an admin with GET LAST CODE", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, lastCode;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "GET LAST CODE",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getLastCode(entityId)];
+                case 2:
+                    lastCode = _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(lastCode)));
+                    return [2 /*return*/];
+            }
+        });
+    }); });
     it("should add an admin as a subscriber when they send a code", function () { return __awaiter(void 0, void 0, void 0, function () {
         var message, response, adminUser;
         return __generator(this, function (_a) {

@@ -171,6 +171,13 @@ class MessageHandler {
           ) {
             const message = await this.getDefaultMessage(entityId);
             return message;
+          } else if (
+            strCmd[0] === "GET" &&
+            strCmd[1] === "LAST" &&
+            strCmd[2] === "CODE"
+          ) {
+            const lastCode = await this.getLastCode(entityId);
+            return lastCode;
           }
         } else if (message === "STATUS") {
           // Status check
@@ -221,6 +228,8 @@ class MessageHandler {
       await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
       await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
     }
+    // Update lastCode
+    await this.models.entity.setLastCode(entityId, campaignCode);
     return subscribers.length;
   };
 
@@ -233,6 +242,7 @@ class MessageHandler {
       await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
       await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
     }
+    await this.models.entity.setLastCode(entityId, campaignCode);
     return subscribers.length;
   };
 
@@ -246,6 +256,11 @@ class MessageHandler {
     const message = await this.models.entity.getDefaultMessage(entityId);
     return message;
   };
+
+  async getLastCode(entityId: string) {
+    const lastCode = await this.models.entity.getLastCode(entityId);
+    return lastCode;
+  }
 
   async addAdmin(entityId: string, newAdmin: string) {
     let phone: E164Number;

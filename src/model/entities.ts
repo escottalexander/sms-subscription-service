@@ -9,6 +9,7 @@ class Entity implements Document {
   name: string;
   contactName: string;
   contactNumber: string;
+  lastCode: string;
 }
 
 class EntityModel {
@@ -90,6 +91,20 @@ class EntityModel {
     return this.collection.updateOne(
       { entityId },
       { $set: { defaultMessage: message } },
+      { upsert: true }
+    );
+  };
+
+  async getLastCode(entityId: string) {
+    const entity = await this.collection
+      .findOne({ entityId })
+    return entity.lastCode;
+  };
+
+  async setLastCode(entityId: string, code: string) {
+    return this.collection.updateOne(
+      { entityId },
+      { $set: { lastCode: code } },
       { upsert: true }
     );
   };
