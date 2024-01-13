@@ -443,7 +443,10 @@ var MessageHandler = /** @class */ (function () {
                         }
                         finally { if (e_3) throw e_3.error; }
                         return [7 /*endfinally*/];
-                    case 11: return [2 /*return*/, subscribers.length];
+                    case 11: return [4 /*yield*/, this.models.entity.setLastCode(entityId, campaignCode)];
+                    case 12:
+                        _b.sent();
+                        return [2 /*return*/, subscribers.length];
                 }
             });
         });
