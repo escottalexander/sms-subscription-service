@@ -316,6 +316,9 @@ class MessageHandler {
 
   async getMessage(entityId: string, name: string) {
     const message = await this.models.entity.getMessage(entityId, name);
+    if (!message) {
+      return responses.UNKNOWN_MSG_NAME;
+    }
     return message;
   };
 
