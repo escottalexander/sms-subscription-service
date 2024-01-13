@@ -601,6 +601,9 @@ var MessageHandler = /** @class */ (function () {
                     case 0: return [4 /*yield*/, this.models.entity.getMessage(entityId, name)];
                     case 1:
                         message = _a.sent();
+                        if (!message) {
+                            return [2 /*return*/, responses_js_1.default.UNKNOWN_MSG_NAME];
+                        }
                         return [2 /*return*/, message];
                 }
             });
