@@ -3,12 +3,12 @@ import logger from "./logger.js";
 const isTest = process.env.NODE_ENV === "test";
 
 const messenger = {
-  send: async (fromNumber, toNumber, message) => {
+  send: async (fromNumber: string, toNumber: string, message: string) => {
     if (isTest) {
       return true;
     }
     try {
-      const response = await client.messages
+      const response = await client?.messages
         .create({
           body: message,
           from: fromNumber,
@@ -18,9 +18,9 @@ const messenger = {
         logger.error("Received error from Twilio: " + response.errorMessage);
         return false;
       }
-      logger.info(`Sent message to ${toNumber}: "${message}" \n Received status '${response.status}'`);
+      logger.info(`Sent message to ${toNumber}: "${message}" \n Received status '${response?.status}'`);
       return true;
-    } catch (e) {
+    } catch (e: any) {
       logger.error("Failed to send message: " + JSON.stringify(e.message));
       return false;
     }

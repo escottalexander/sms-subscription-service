@@ -1,4 +1,8 @@
-import config from "./config.js";
+import * as dotenv from "dotenv";
+const path = process.env.NODE_ENV === "test" ? "example.env" : ".env" ;
+dotenv.config({ path: __dirname + path });
+const { support_number_human_readable } = process.env;
+
 const responses = {
   SET_MESSAGE: "Default message has been set",
   VALID_CAMPAIGN_CODE:
@@ -16,7 +20,7 @@ const responses = {
   DEFAULT_MESSAGE:
     "Your milk has been delivered. Pick up at your earliest convenience during location hours.",
   UNKNOWN: "We don't recognize that code",
-  ERROR: `Something went wrong with that request. Contact ${config.supportNumberHumanReadable} for assistance`,
+  ERROR: `Something went wrong with that request. Contact ${support_number_human_readable} for assistance`,
 };
 
 export default responses;
