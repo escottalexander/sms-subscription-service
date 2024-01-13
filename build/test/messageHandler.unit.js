@@ -412,6 +412,31 @@ describe("decipherMessage", function () {
                 }
             });
         }); });
+        it("should call EntityModel.getDefaultMessage when message is GET MESSAGE", function () { return __awaiter(void 0, void 0, void 0, function () {
+            var req, reqCtx, response;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        getDefaultMessageStub.resolves("This is the default message");
+                        req = {
+                            Body: "GET MESSAGE",
+                            From: "+1234567890",
+                            To: "+17777777777",
+                        };
+                        reqCtx = getRequestContext(req, {
+                            phoneNumber: "+1234567890",
+                            isAdmin: true,
+                            isActive: true,
+                        });
+                        return [4 /*yield*/, messageHandler.decipherMessage(reqCtx, req)];
+                    case 1:
+                        response = _a.sent();
+                        expect(response).to.equal("This is the default message");
+                        expect(getDefaultMessageStub.calledOnceWithExactly("00001"));
+                        return [2 /*return*/];
+                }
+            });
+        }); });
         it("should send message back to admin when message is not recognized", function () { return __awaiter(void 0, void 0, void 0, function () {
             var req, reqCtx;
             return __generator(this, function (_a) {

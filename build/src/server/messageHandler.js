@@ -134,11 +134,11 @@ var MessageHandler = /** @class */ (function () {
     ;
     MessageHandler.prototype.decipherMessage = function (requestContext, reqBody) {
         return __awaiter(this, void 0, void 0, function () {
-            var message, fromPhone, fromPhoneNumberEntry, entity, entityId, entityPhone, campaignCodes, _a, subExists, fieldName, strCmd, count, newAdmin, response, admin, response, count, e_1;
+            var message, fromPhone, fromPhoneNumberEntry, entity, entityId, entityPhone, campaignCodes, _a, subExists, fieldName, strCmd, count, newAdmin, response, admin, response, count, message_1, e_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        _b.trys.push([0, 29, , 30]);
+                        _b.trys.push([0, 31, , 32]);
                         message = requestContext.message, fromPhone = requestContext.fromPhone, fromPhoneNumberEntry = requestContext.fromPhoneNumberEntry, entity = requestContext.entity;
                         entityId = entity.entityId, entityPhone = entity.accountPhoneNumber, campaignCodes = entity.campaignCodes;
                         message = message.toUpperCase().trim();
@@ -178,8 +178,8 @@ var MessageHandler = /** @class */ (function () {
                         _b.sent();
                         return [2 /*return*/, responses_js_1.default.VALID_CAMPAIGN_CODE];
                     case 8:
-                        if (!(fromPhoneNumberEntry && fromPhoneNumberEntry.isAdmin && fromPhoneNumberEntry.isActive)) return [3 /*break*/, 28];
-                        if (!(message.split(" ").length > 1)) return [3 /*break*/, 27];
+                        if (!(fromPhoneNumberEntry && fromPhoneNumberEntry.isAdmin && fromPhoneNumberEntry.isActive)) return [3 /*break*/, 30];
+                        if (!(message.split(" ").length > 1)) return [3 /*break*/, 29];
                         strCmd = message.split(" ");
                         if (!(strCmd[0] === "SEND" && campaignCodes.includes(strCmd[1]))) return [3 /*break*/, 10];
                         return [4 /*yield*/, this.handleDeliveryMessage(entityPhone, entityId, strCmd[1])];
@@ -206,7 +206,7 @@ var MessageHandler = /** @class */ (function () {
                         // add campaign code
                         _b.sent();
                         return [2 /*return*/, responses_js_1.default.ADD_CODE.replace("%CODE%", strCmd[2])];
-                    case 14: return [3 /*break*/, 26];
+                    case 14: return [3 /*break*/, 28];
                     case 15:
                         if (!(strCmd[0] === "REMOVE")) return [3 /*break*/, 20];
                         if (!(strCmd[1] === "ADMIN" && strCmd[2])) return [3 /*break*/, 17];
@@ -223,7 +223,7 @@ var MessageHandler = /** @class */ (function () {
                         // remove campaign code
                         _b.sent();
                         return [2 /*return*/, responses_js_1.default.REMOVE_CODE.replace("%CODE%", strCmd[2])];
-                    case 19: return [3 /*break*/, 26];
+                    case 19: return [3 /*break*/, 28];
                     case 20:
                         if (!(strCmd[0] === "CHANGE" &&
                             strCmd[1] === "CODE" &&
@@ -254,8 +254,15 @@ var MessageHandler = /** @class */ (function () {
                     case 25:
                         _b.sent();
                         return [2 /*return*/, responses_js_1.default.SET_MESSAGE];
-                    case 26: return [3 /*break*/, 28];
+                    case 26:
+                        if (!(strCmd[0] === "GET" &&
+                            strCmd[1] === "MESSAGE")) return [3 /*break*/, 28];
+                        return [4 /*yield*/, this.getDefaultMessage(entityId)];
                     case 27:
+                        message_1 = _b.sent();
+                        return [2 /*return*/, message_1];
+                    case 28: return [3 /*break*/, 30];
+                    case 29:
                         if (message === "STATUS") {
                             // Status check
                             return [2 /*return*/, responses_js_1.default.STATUS];
@@ -265,15 +272,15 @@ var MessageHandler = /** @class */ (function () {
                             setTimeout(this.shutDownProcess, 1000);
                             return [2 /*return*/, responses_js_1.default.SHUTDOWN];
                         }
-                        _b.label = 28;
-                    case 28: 
+                        _b.label = 30;
+                    case 30: 
                     // Default to this if nothing else was hit
                     return [2 /*return*/, responses_js_1.default.UNKNOWN];
-                    case 29:
+                    case 31:
                         e_1 = _b.sent();
                         logger_js_1.default.error(e_1.message);
                         return [2 /*return*/, responses_js_1.default.ERROR];
-                    case 30: return [2 /*return*/];
+                    case 32: return [2 /*return*/];
                 }
             });
         });
@@ -439,6 +446,20 @@ var MessageHandler = /** @class */ (function () {
                     case 1:
                         _a.sent();
                         return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ;
+    MessageHandler.prototype.getDefaultMessage = function (entityId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var message;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.models.entity.getDefaultMessage(entityId)];
+                    case 1:
+                        message = _a.sent();
+                        return [2 /*return*/, message];
                 }
             });
         });

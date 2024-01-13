@@ -179,6 +179,28 @@ describe("Core Logic", function () {
             }
         });
     }); });
+    it("should get an entity's default message when called by an admin with GET MESSAGE", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var message, response, defaultMessage;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    message = {
+                        Body: "GET MESSAGE",
+                        From: admin.phoneNumber,
+                        To: entity === null || entity === void 0 ? void 0 : entity.accountPhoneNumber,
+                    };
+                    response = buildResponse();
+                    return [4 /*yield*/, messageHandler.handle(buildRequest(message), response)];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, messageHandler.models.entity.getDefaultMessage(entityId)];
+                case 2:
+                    defaultMessage = _a.sent();
+                    expect(response.send.calledOnceWith(twimlResponse(defaultMessage)));
+                    return [2 /*return*/];
+            }
+        });
+    }); });
     it("should add a code when it receives ADD CODE from admin", function () { return __awaiter(void 0, void 0, void 0, function () {
         var message, response, codes;
         return __generator(this, function (_a) {

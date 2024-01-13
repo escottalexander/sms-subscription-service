@@ -314,6 +314,27 @@ describe("decipherMessage", () => {
       );
     });
 
+    it("should call EntityModel.getDefaultMessage when message is GET MESSAGE", async () => {
+      getDefaultMessageStub.resolves("This is the default message");
+      const req = {
+        Body: "GET MESSAGE",
+        From: "+1234567890",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+1234567890",
+        isAdmin: true,
+        isActive: true,
+      });
+
+      const response = await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(response).to.equal("This is the default message");
+      expect(
+        getDefaultMessageStub.calledOnceWithExactly("00001")
+      );
+    });
+
     it("should send message back to admin when message is not recognized", async () => {
 
       const req = {

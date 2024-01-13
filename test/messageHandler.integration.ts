@@ -88,6 +88,19 @@ describe("Core Logic", () => {
     expect(response.send.calledOnceWith(twimlResponse(responses.SET_MESSAGE)));
   });
 
+  it("should get an entity's default message when called by an admin with GET MESSAGE", async () => {
+    const message = {
+      Body: "GET MESSAGE",
+      From: admin.phoneNumber,
+      To: entity?.accountPhoneNumber,
+    };
+    const response = buildResponse();
+    await messageHandler.handle(buildRequest(message), response);
+
+    const defaultMessage = await messageHandler.models.entity.getDefaultMessage(entityId as string);
+    expect(response.send.calledOnceWith(twimlResponse(defaultMessage)));
+  });
+
   it("should add a code when it receives ADD CODE from admin", async () => {
     const message = {
       Body: "add code test",

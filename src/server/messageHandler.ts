@@ -165,6 +165,12 @@ class MessageHandler {
           ) {
             await this.setDefaultMessage(entityId, reqBody.Body);
             return responses.SET_MESSAGE;
+          } else if (
+            strCmd[0] === "GET" &&
+            strCmd[1] === "MESSAGE"
+          ) {
+            const message = await this.getDefaultMessage(entityId);
+            return message;
           }
         } else if (message === "STATUS") {
           // Status check
@@ -234,6 +240,11 @@ class MessageHandler {
     // Remove first two commands from message
     const message = unparsedMessage.split(" ").splice(2).join(" ");
     await this.models.entity.setDefaultMessage(entityId, message);
+  };
+
+  async getDefaultMessage(entityId: string) {
+    const message = await this.models.entity.getDefaultMessage(entityId);
+    return message;
   };
 
   async addAdmin(entityId: string, newAdmin: string) {

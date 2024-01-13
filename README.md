@@ -19,6 +19,7 @@ For admin users, they can use these commands in addition:
 - `CHANGE CODE %CODE%` - To change a campaign code and all subscribers to a new or existing code. Effectively removes the old code.
 - `REMOVE CODE %CODE%` - To remove a campaign code and unsubscribe all subscribers with that code. Consider using `CHANGE CODE` as it migrates users without them having to sign up for a new code.
 - `SET MESSAGE %MESSAGE%` - Set the default message that is sent to subscribers.
+- `GET MESSAGE` - Get the default message.
 - `CUSTOM %CODE OR ALL% %MESSAGE%` - To send a custom message to either a specific campaign or use ALL to send to entire list.
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
