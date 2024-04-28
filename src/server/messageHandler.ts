@@ -72,6 +72,7 @@ class MessageHandler {
       // Handle STOP and START
       switch (message) {
         case "STOP":
+        case "CANCEL":
           await this.endSubscription(entityId, fromPhone);
           return;
         case "UNSTOP":

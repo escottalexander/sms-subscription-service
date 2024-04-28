@@ -666,6 +666,30 @@ describe("decipherMessage", () => {
       expect(sendStub.notCalled).to.be.true;
     });
 
+    it("should remove phone number from database and send confirmation when message is CANCEL", async () => {
+      const req = {
+        Body: "CANCEL",
+        From: "+14444444444",
+        To: "+17777777777",
+      };
+      const reqCtx = getRequestContext(req, {
+        phoneNumber: "+14444444444",
+        isAdmin: false,
+        isActive: true,
+      });
+
+      await messageHandler.decipherMessage(reqCtx, req);
+
+      expect(
+        createStub.calledOnceWithExactly({
+          entityId: "00001",
+          phoneNumber: "+14444444444",
+          isActive: false,
+        })
+      ).to.be.true;
+      expect(sendStub.notCalled).to.be.true;
+    });
+
     it("should send unrecognized code message when message is not valid", async () => {
       const req = {
         Body: "INVALID",
