@@ -4,3 +4,4 @@ node_modules
 .*-audit.json
 contact_exports/
 pid
+build/
