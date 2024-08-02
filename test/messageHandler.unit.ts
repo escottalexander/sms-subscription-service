@@ -20,7 +20,7 @@ const entity = {
     name: "Test Entity",
     contactName: "Test Contact",
     contactNumber: "+18888888888",
-    campaignCodes: ["LOC1", "LOC2"],
+    campaignCodes: ["LOC1", "LOC2", "TEST1"],
 } as unknown as WithId<Entity>;
 
 describe("decipherMessage", () => {
@@ -64,7 +64,8 @@ describe("decipherMessage", () => {
 
   describe("when a message is received from an admin phone number", () => {
     beforeEach(() => {
-      getCampaignCodesStub.resolves(["LOC1", "LOC2"]);
+      sendStub.resolves({ success: true, error: null })
+      getCampaignCodesStub.resolves(["LOC1", "LOC2", "TEST1"]);
       findByPhoneNumberStub.resolves({
         phoneNumber: "+1234567890",
         isAdmin: true,
@@ -311,7 +312,7 @@ describe("decipherMessage", () => {
 
       const response = await messageHandler.decipherMessage(reqCtx, req);
 
-      expect(response).to.equal("Default message has been set");
+      expect(response).to.equal(`${responses.SET_MESSAGE}. Segments: 1`);
       expect(
         setMessageStub.calledOnceWithExactly("00001", "Hello world!")
       ).to.be.true;
@@ -375,7 +376,7 @@ describe("decipherMessage", () => {
 
       const response = await messageHandler.decipherMessage(reqCtx, req);
 
-      expect(response).to.equal("Set new message with name: MSG1");
+      expect(response).to.equal(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "MSG1")}. Segments: 1`);
       expect(
         setMessageStub.calledOnceWithExactly("00001", "MSG1", "This is message 1")
       ).to.be.true;
@@ -393,7 +394,7 @@ describe("decipherMessage", () => {
 
       const response2 = await messageHandler.decipherMessage(reqCtx2, req2);
 
-      expect(response2).to.equal("Set new message with name: MSG2");
+      expect(response2).to.equal(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "MSG2")}. Segments: 1`);
       expect(
         setMessageStub.calledOnceWithExactly("00001", "MSG2", "This is message 2")
       ).to.be.true;

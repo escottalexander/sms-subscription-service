@@ -6,7 +6,7 @@ import connect from "../src/services/mongodb.js";
 import MessageHandler from "../src/server/messageHandler.js";
 import messenger from "../src/services/messenger.js";
 import { Entity } from "../src/model/entities.js";
-import { Request, Response } from "express";
+import { Request, response } from "express";
 import { Document } from "mongodb";
 import { mockRequest, mockResponse } from "mock-req-res";
 
@@ -39,7 +39,7 @@ const normalUser2 = {
 };
 
 async function init() {
-  sendStub = sinon.stub(messenger, "send").resolves(true);
+  sendStub = sinon.stub(messenger, "send").resolves({ success: true, error: null });
   // Drop all records in db
   try {
     const db = await connect();
@@ -96,9 +96,9 @@ describe("Reporting Tests", function () {
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
     // Change Subscribe
     await messageHandler.handle(getMessage("report2"), buildResponse());
     // End Subscribe
@@ -137,6 +137,8 @@ describe("Reporting Tests", function () {
       failedCount: 1,
       changeSubscriptionCount: 1,
       endSubscriptionCount: 1,
+      responseCount: 6,
+      segments: 11,
     };
     for (let prop of Object.keys(expected)) {
       expect(report[prop]).to.equal(expected[prop]);
@@ -153,9 +155,9 @@ describe("Reporting Tests", function () {
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
     // Change Subscribe
     await messageHandler.handle(getMessage("report2", normalUser), buildResponse());
     await messageHandler.handle(getMessage("report2", normalUser2), buildResponse());
@@ -196,6 +198,8 @@ describe("Reporting Tests", function () {
       failedCount: 2,
       changeSubscriptionCount: 2,
       endSubscriptionCount: 2,
+      responseCount: 8,
+      segments: 18,
     };
     for (let prop of Object.keys(expected)) {
       expect(report[prop]).to.equal(expected[prop]);
@@ -217,27 +221,27 @@ describe("Reporting Tests", function () {
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
 
     // Day 2
     clock.tick(aDay);
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
 
     // Day 3
     clock.tick(aDay);
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
 
     clock.restore();
 
@@ -274,27 +278,27 @@ describe("Reporting Tests", function () {
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
 
     // Day 2
     clock.tick(aDay);
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
 
     // Day 3
     clock.tick(aDay);
     // Sent message
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
     // Failed message
-    sendStub.returns(false);
+    sendStub.returns({ success: false });
     await messageHandler.handle(getAdminMessage("send report"), buildResponse());
-    sendStub.returns(true);
+    sendStub.returns({ success: true });
     // Change Subscribe
     await messageHandler.handle(getMessage("report2"), buildResponse());
     // End Subscribe

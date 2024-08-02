@@ -17,6 +17,7 @@ class DailyReport implements Document {
   changeSubscriptionCount: number;
   endSubscriptionCount: number;
   responseCount: number;
+  segments: number;
 }
 
 class ReportingModel {
@@ -58,8 +59,8 @@ class ReportingModel {
     );
   }
 
-  incrementCount({ entityId, campaignCode, fieldName }: { entityId: string, campaignCode?: string, fieldName?: string }) {
-    const updateParams = { entityId, $inc: { [`${fieldName}`]: 1 } };
+  incrementCount({ entityId, campaignCode, fieldName, segments = 1 }: { entityId: string, campaignCode?: string, fieldName?: string, segments?: number }) {
+    const updateParams = { entityId, $inc: { [`${fieldName}`]: 1, segments } };
     if (campaignCode) {
       updateParams.$inc[`campaignCodes.${campaignCode}.${fieldName}`] = 1;
     }
