@@ -44,7 +44,7 @@ class MessageHandler {
         logger.error("Failed to increment response count", err.message);
       }
     } else {
-      res.sendStatus(200);
+      res.end();
     }
   };
 
