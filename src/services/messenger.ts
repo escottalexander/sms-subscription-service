@@ -2,10 +2,15 @@ import client from "./twilio.js";
 import logger from "./logger.js";
 const isTest = process.env.NODE_ENV === "test";
 
+export interface MessengerResponse {
+  success: boolean;
+  error: string | null;
+}
+
 const messenger = {
   send: async (fromNumber: string, toNumber: string, message: string) => {
     if (isTest) {
-      return true;
+      return { success: true, error: null };
     }
     try {
       const response = await client?.messages
@@ -16,13 +21,13 @@ const messenger = {
         });
       if (response && response.errorCode) {
         logger.error("Received error from Twilio: " + response.errorMessage);
-        return false;
+        return { success: false, error: response.errorMessage };
       }
       logger.info(`Sent message to ${toNumber}: "${message}" \n Received status '${response?.status}'`);
-      return true;
+      return { success: true, error: null };
     } catch (e: any) {
       logger.error("Failed to send message: " + JSON.stringify(e.message));
-      return false;
+      return { success: false, error: e.message};
     }
   },
 };

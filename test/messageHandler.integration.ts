@@ -65,7 +65,7 @@ describe("Core Logic", () => {
   before(init);
   beforeEach(() => {
     // Stub out text sending functions
-    sendStub = sinon.stub(messenger, "send").resolves(true);
+    sendStub = sinon.stub(messenger, "send").resolves({ success: true, error: null });
   });
   afterEach(() => {
     sendStub.restore();
@@ -82,7 +82,7 @@ describe("Core Logic", () => {
 
     const setting = await messageHandler.models.entity.getDefaultMessage(entityId as string);
     expect(setting).to.equal("Hello world!");
-    expect(response.send.calledOnceWith(twimlResponse(responses.SET_MESSAGE))).to.be.true;
+    expect(response.send.calledOnceWith(twimlResponse(`${responses.SET_MESSAGE}. Segments: 1`))).to.be.true;
   });
 
   it("should get an entity's default message when called by an admin with GET MESSAGE", async () => {
@@ -250,7 +250,7 @@ describe("Core Logic", () => {
     };
     const response2 = buildResponse();
     await messageHandler.handle(buildRequest(message2), response2);
-    expect(response2.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+    expect(response2.send.calledOnceWith(twimlResponse(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")}. Segments: 1`))).to.be.true;
 
     const message3 = {
       Body: "set message:OTHER Hello to the world!",
@@ -259,7 +259,7 @@ describe("Core Logic", () => {
     };
     const response3 = buildResponse();
     await messageHandler.handle(buildRequest(message3), response3);
-    expect(response3.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "OTHER")))).to.be.true;
+    expect(response3.send.calledOnceWith(twimlResponse(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "OTHER")}. Segments: 1`))).to.be.true;
 
     const message4 = {
       Body: "get message names",
@@ -314,7 +314,7 @@ describe("Core Logic", () => {
     };
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
-    expect(response.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+    expect(response.send.calledOnceWith(twimlResponse(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")}. Segments: 1`))).to.be.true;
 
     const namedMessage = await messageHandler.models.entity.getMessage(entityId as string, "NAME");
     expect(namedMessage).to.equal("Hello to the world!");
@@ -328,7 +328,7 @@ describe("Core Logic", () => {
     };
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
-    expect(response.send.calledOnceWith(twimlResponse(responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")))).to.be.true;
+    expect(response.send.calledOnceWith(twimlResponse(`${responses.SET_NAMED_MESSAGE.replace("%NAME%", "NAME")}. Segments: 1`))).to.be.true;
 
     const message2 = {
       Body: "send message:name test",

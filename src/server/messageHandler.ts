@@ -10,6 +10,7 @@ import { Db, WithId } from "mongodb";
 import { Request, Response } from "express-serve-static-core";
 import { ParsedQs } from "qs";
 import { twiml } from "twilio/lib";
+import { replaceCommonUnicode, messageContainsUnicode, getSegments } from "../utils/index.js";
 const { MessagingResponse } = twiml;
 
 class MessageHandler {
@@ -43,7 +44,7 @@ class MessageHandler {
         logger.error("Failed to increment response count", err.message);
       }
     } else {
-      res.sendStatus(200);
+      res.end();
     }
   };
 
@@ -72,6 +73,7 @@ class MessageHandler {
       // Handle STOP and START
       switch (message) {
         case "STOP":
+        case "UNSUBSCRIBE":
         case "CANCEL":
           await this.endSubscription(entityId, fromPhone);
           return;
@@ -122,9 +124,8 @@ class MessageHandler {
             } else if (
               strCmd[1] === "CODE" &&
               strCmd[2] &&
-              strCmd[2] !== "STOP"
+              !["STOP", "CANCEL", "UNSUBSCRIBE"].includes(strCmd[2]) // Disallow STOP keywords as a campaignCode
             ) {
-              // Disallow STOP as a campaignCode
               // add campaign code
               await this.addCampaignCode(entityId, strCmd[2]);
               return responses.ADD_CODE.replace("%CODE%", strCmd[2]);
@@ -144,11 +145,10 @@ class MessageHandler {
           } else if (
             strCmd[0] === "CHANGE" &&
             strCmd[1] === "CODE" &&
-            strCmd[2] &&
+            campaignCodes.includes(strCmd[2]) &&
             strCmd[3] &&
-            strCmd[3] !== "STOP"
+            !["STOP", "CANCEL", "UNSUBSCRIBE"].includes(strCmd[3]) // Disallow STOP keywords as a campaignCode
           ) {
-            // Disallow STOP as a campaignCode
             // change code and all subscribers
             await this.changeCampaignCode(entityId, strCmd[2], strCmd[3]);
             return responses.CHANGE_CODE.replace("%CODE1%", strCmd[2]).replace(
@@ -168,16 +168,24 @@ class MessageHandler {
             strCmd[1] === "MESSAGE" &&
             strCmd[2]
           ) {
-            await this.setDefaultMessage(entityId, reqBody.Body);
-            return responses.SET_MESSAGE;
+            // Get non-uppercased version of message and splice off commands
+            const newMessage = replaceCommonUnicode(reqBody.Body.split(" ").splice(2).join(" "));
+            const containUnicode = messageContainsUnicode(newMessage);
+            await this.setDefaultMessage(entityId, newMessage);
+            let segments: number = getSegments(newMessage);
+            return `${responses.SET_MESSAGE}.${containUnicode ? " Your message contains unicode characters which restricts segment length to 70 characters." : ""} Segments: ${segments}`;
           } else if (
             strCmd[0] === "SET" &&
             strCmd[1].includes("MESSAGE:") &&
             strCmd[2]
           ) {
             const name = strCmd[1].replace("MESSAGE:", "");
-            await this.setMessage(entityId, name, reqBody.Body);
-            return responses.SET_NAMED_MESSAGE.replace("%NAME%", name);
+            // Get non-uppercased version of message and splice off commands
+            const newMessage = replaceCommonUnicode(reqBody.Body.split(" ").splice(2).join(" "));
+            const containUnicode = messageContainsUnicode(newMessage);
+            await this.setMessage(entityId, name, newMessage);
+            let segments: number = getSegments(newMessage);
+            return `${responses.SET_NAMED_MESSAGE.replace("%NAME%", name)}.${containUnicode ? " Your message contains unicode characters which restricts segment length to 70 characters." : ""} Segments: ${segments}`;
           } else if (
             strCmd[0] === "SET" &&
             strCmd[1] === "DEFAULT" &&
@@ -258,9 +266,10 @@ class MessageHandler {
       message = responses.DEFAULT_MESSAGE;
     }
     for (let sub of subscribers) {
-      const success = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const segments: number = getSegments(message);
       await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
-      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
+      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
     }
     // Update lastCode
     await this.models.entity.setLastCode(entityId, campaignCode);
@@ -272,9 +281,10 @@ class MessageHandler {
     // Remove first two commands from message
     const message = unparsedMessage.split(" ").splice(2).join(" ");
     for (let sub of subscribers) {
-      const success = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const segments: number = getSegments(message);
       await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
-      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
+      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
     }
     await this.models.entity.setLastCode(entityId, campaignCode);
     return subscribers.length;
@@ -289,18 +299,17 @@ class MessageHandler {
     const subscribers = await this.models.phoneNumber.findAllByCode({ entityId, campaignCode });
 
     for (let sub of subscribers) {
-      const success = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const segments: number = getSegments(message);
       await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
-      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount" });
+      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
     }
     await this.models.entity.setLastCode(entityId, campaignCode);
     const count = subscribers.length;
     return responses.NAMED_MESSAGE.replace("%COUNT%", count.toString()).replace("%NAME%", messageName);
   };
 
-  async setDefaultMessage(entityId: string, unparsedMessage: string) {
-    // Remove first two commands from message
-    const message = unparsedMessage.split(" ").splice(2).join(" ");
+  async setDefaultMessage(entityId: string, message: string) {
     await this.models.entity.setDefaultMessage(entityId, message);
   };
 
@@ -309,9 +318,7 @@ class MessageHandler {
     return message;
   };
 
-  async setMessage(entityId: string, name: string, unparsedMessage: string) {
-    // Remove first two commands from message
-    const message = unparsedMessage.split(" ").splice(2).join(" ");
+  async setMessage(entityId: string, name: string, message: string) {
     await this.models.entity.setMessage(entityId, name, message);
   };
 
