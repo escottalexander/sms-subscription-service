@@ -265,14 +265,10 @@ class MessageHandler {
     if (!message) {
       message = responses.DEFAULT_MESSAGE;
     }
-    for (let sub of subscribers) {
-      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
-      const segments: number = getSegments(message);
-      await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
-      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
-    }
-    // Update lastCode
-    await this.models.entity.setLastCode(entityId, campaignCode);
+
+    // Not awaiting this because we don't need to wait for the messages to send to return a response
+    this.sendBulkMessages(entityPhone, entityId, campaignCode, subscribers, message);
+
     return subscribers.length;
   };
 
@@ -280,13 +276,10 @@ class MessageHandler {
     const subscribers = await this.models.phoneNumber.findAllByCode({ entityId, campaignCode });
     // Remove first two commands from message
     const message = unparsedMessage.split(" ").splice(2).join(" ");
-    for (let sub of subscribers) {
-      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
-      const segments: number = getSegments(message);
-      await this.models.phoneNumber.incrementSendCount({ entityId, phoneNumber: sub.phoneNumber, success });
-      await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
-    }
-    await this.models.entity.setLastCode(entityId, campaignCode);
+
+    // Not awaiting this because we don't need to wait for the messages to send to return a response
+    this.sendBulkMessages(entityPhone, entityId, campaignCode, subscribers, message);
+
     return subscribers.length;
   };
 
@@ -298,6 +291,14 @@ class MessageHandler {
     }
     const subscribers = await this.models.phoneNumber.findAllByCode({ entityId, campaignCode });
 
+    // Not awaiting this because we don't need to wait for the messages to send to return a response
+    this.sendBulkMessages(entityPhone, entityId, campaignCode, subscribers, message);
+
+    const count = subscribers.length;
+    return responses.NAMED_MESSAGE.replace("%COUNT%", count.toString()).replace("%NAME%", messageName);
+  };
+
+  async sendBulkMessages(entityPhone: string, entityId: string, campaignCode: string, subscribers: WithId<PhoneNumber>[], message: string) {
     for (let sub of subscribers) {
       const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
       const segments: number = getSegments(message);
@@ -305,9 +306,7 @@ class MessageHandler {
       await this.models.reporting.incrementCount({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments });
     }
     await this.models.entity.setLastCode(entityId, campaignCode);
-    const count = subscribers.length;
-    return responses.NAMED_MESSAGE.replace("%COUNT%", count.toString()).replace("%NAME%", messageName);
-  };
+  }
 
   async setDefaultMessage(entityId: string, message: string) {
     await this.models.entity.setDefaultMessage(entityId, message);
