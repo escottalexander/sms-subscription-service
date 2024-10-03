@@ -179,12 +179,17 @@ describe("Core Logic", () => {
 
     expect(response.send.calledOnceWith(twimlResponse(responses.SEND_CODE.replace("%CODE%", "TEST").replace("%COUNT%", "1")))).to.be.true;
 
-    expect(
-      sendStub.calledWithExactly(
-        normalUser.phoneNumber,
-        responses.DEFAULT_MESSAGE
-      )
-    );
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(
+          sendStub.calledWithExactly(
+            normalUser.phoneNumber,
+            responses.DEFAULT_MESSAGE
+          )
+        );
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
   });
 
   it("should send a message to subscriber when CUSTOM CODE is sent by admin", async () => {
@@ -197,9 +202,13 @@ describe("Core Logic", () => {
     await messageHandler.handle(buildRequest(message), response);
 
     expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "1")))).to.be.true;
-
-    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
-    expect(!sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+        expect(!sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
   });
 
   it("should send a message to all when CUSTOM ALL is sent by admin", async () => {
@@ -212,9 +221,13 @@ describe("Core Logic", () => {
     await messageHandler.handle(buildRequest(message), response);
 
     expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "2")))).to.be.true;
-
-    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
-    expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
   });
 
   it("should return an error when message name is not known", async () => {
@@ -227,10 +240,14 @@ describe("Core Logic", () => {
     await messageHandler.handle(buildRequest(message), response);
 
     expect(response.send.calledOnceWith(twimlResponse(responses.UNKNOWN_MSG_NAME))).to.be.true;
-
-    expect(
-      sendStub.notCalled
-    );
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(
+          sendStub.notCalled
+        );
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
   });
 
   it("should return all message names when GET MESSAGE NAMES is sent by admin", async () => {
@@ -341,12 +358,17 @@ describe("Core Logic", () => {
     expect(response2.send.calledOnceWith(twimlResponse(responses.NAMED_MESSAGE.replace("%NAME%", "NAME").replace("%COUNT%", "1")))).to.be.true;
 
     const namedMessage = await messageHandler.models.entity.getMessage(entityId as string, "NAME");
-    expect(
-      sendStub.calledWithExactly(
-        normalUser.phoneNumber,
-        namedMessage
-      )
-    );
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(
+          sendStub.calledWithExactly(
+            normalUser.phoneNumber,
+            namedMessage
+          )
+        );
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
   });
 
   it("should set an entity's last code when an admin sends a campaign", async () => {
@@ -357,7 +379,7 @@ describe("Core Logic", () => {
     };
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
-
+    await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
     const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
     expect(lastCode).to.equal("TEST1");
 
@@ -368,7 +390,7 @@ describe("Core Logic", () => {
     };
     const response2 = buildResponse();
     await messageHandler.handle(buildRequest(message2), response2);
-
+    await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
     const lastCode2 = await messageHandler.models.entity.getLastCode(entityId as string);
     expect(lastCode2).to.equal("TEST2");
   });
@@ -633,8 +655,13 @@ describe("Core Logic", () => {
     await messageHandler.handle(buildRequest(adminMessage), adminResponse);
     const result = responses.SEND_CODE.replace("%CODE%", "TEST1").replace("%COUNT%", "0");
     expect(adminResponse.send.calledOnceWith(twimlResponse(result))).to.be.true;
-    expect(sendStub.callCount).to.equal(0);
-
+    
+    await new Promise<void>((res) => {
+      setTimeout(() => {
+        expect(sendStub.callCount).to.equal(0);
+        res();
+      }, 100); // Wait for the message to send since it's async
+    });
     const start = {
       Body: "start",
       From: normalUser.phoneNumber,

@@ -59,12 +59,55 @@ class ReportingModel {
     );
   }
 
+  createOrUpdateOp(params: { [x: string]: any; entityId: string; date?: Date; $inc?: any; }) {
+    if (!params.entityId) {
+      throw new Error("Must provide entityId");
+    }
+    if (!params.date) {
+      params.date = new Date();
+    }
+
+    const date = normalizeDate(params.date);
+    const { entityId, $inc } = params;
+    const exclude = ["entityId", "phoneNumber", "$inc", "date"];
+    const updateObj: { $set?: any, $inc?: any } = {};
+    const $set = {};
+    for (const key in params) {
+      if (exclude.includes(key)) {
+        continue;
+      }
+      $set[key] = params[key];
+    }
+    if ($inc) {
+      updateObj.$inc = $inc;
+    }
+    if (Object.keys($set).length) {
+      updateObj.$set = $set;
+    }
+
+    return {
+      updateOne: {
+        filter: { entityId, date },
+        update: updateObj,
+        upsert: true
+      }
+    };
+  }
+
   incrementCount({ entityId, campaignCode, fieldName, segments = 1 }: { entityId: string, campaignCode?: string, fieldName?: string, segments?: number }) {
     const updateParams = { entityId, $inc: { [`${fieldName}`]: 1, segments } };
     if (campaignCode) {
       updateParams.$inc[`campaignCodes.${campaignCode}.${fieldName}`] = 1;
     }
     return this.createOrUpdate(updateParams);
+  }
+
+  incrementCountOp({ entityId, campaignCode, fieldName, segments = 1 }: { entityId: string, campaignCode?: string, fieldName?: string, segments?: number }) {
+    const updateParams = { entityId, $inc: { [`${fieldName}`]: 1, segments } };
+    if (campaignCode) {
+      updateParams.$inc[`campaignCodes.${campaignCode}.${fieldName}`] = 1;
+    }
+    return this.createOrUpdateOp(updateParams);
   }
 
   remove({ entityId, date }: { entityId: string, date: Date }) {

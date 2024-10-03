@@ -41,6 +41,32 @@ class PhoneNumberModel {
     );
   }
 
+  createOrUpdateOp(params: { [x: string]: any; entityId?: string; phoneNumber?: string; $inc?: {} }) {
+    const { entityId, phoneNumber, $inc } = params;
+    const exclude = ["entityId", "phoneNumber", "$inc"];
+    const updateObj: { $set: any, $inc?: any } = { $set: {} };
+    for (const key in params) {
+      if (exclude.includes(key)) {
+        continue;
+      }
+      updateObj.$set[key] = params[key];
+    }
+    if ($inc) {
+      updateObj.$inc = $inc;
+    }
+    // Add last modified date to record
+    const now = new Date();
+    updateObj.$set.lastUpdated = now;
+    // Actually use upserts to make sure we don't have duplicates
+    return {
+      updateOne: {
+        filter: { entityId, phoneNumber },
+        update: updateObj,
+        upsert: true
+      }
+    };
+  }
+
   updateCampaignCode(entityId: string, oldCode: string, newCode: string | null) {
     const now = new Date();
     return this.collection.updateMany(
@@ -89,6 +115,18 @@ class PhoneNumberModel {
       updateParams.$inc = { failedCount: 1 };
     }
     return this.createOrUpdate(updateParams);
+  }
+
+  incrementSendCountOp({ entityId, phoneNumber, success }: { entityId: string, phoneNumber: string, success: boolean }) {
+    const updateParams = { entityId, phoneNumber, lastSendAttempt: new Date() } as { entityId: string, phoneNumber: string, lastSendAttempt: Date, $inc?: any, failedCount?: number, sentCount?: number };
+    if (success) {
+      updateParams.$inc = { sentCount: 1 };
+      // Reset failed count because we only care if a number always fails
+      updateParams.failedCount = 0;
+    } else {
+      updateParams.$inc = { failedCount: 1 };
+    }
+    return this.createOrUpdateOp(updateParams);
   }
 }
 

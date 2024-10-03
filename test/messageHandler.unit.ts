@@ -105,7 +105,12 @@ describe("decipherMessage", () => {
       await messageHandler.decipherMessage(reqCtx, req);
 
       expect(findAllStub.calledOnceWithExactly({entityId: "00001", campaignCode: "LOC1"}));
-      expect(sendStub.callCount).to.equal(3);
+      await new Promise<void>((res) => {
+        setTimeout(() => {
+          expect(sendStub.callCount).to.equal(3);
+          res();
+        }, 100);
+      });
     });
 
     it("should call addAdmin when message is ADD ADMIN", async () => {
@@ -290,10 +295,15 @@ describe("decipherMessage", () => {
       await messageHandler.decipherMessage(reqCtx, req);
 
       expect(findAllStub.calledOnceWithExactly({entityId: "00001", campaignCode: "LOC1"}));
-      expect(sendStub.callCount).to.equal(3);
-      expect(sendStub.calledWith("+1234567890", "Hello world!"));
-      expect(sendStub.calledWith("+2234567890", "Hello world!"));
-      expect(sendStub.calledWith("+3234567890", "Hello world!"));
+      await new Promise<void>((res) => {
+        setTimeout(() => {
+          expect(sendStub.callCount).to.equal(3);
+          expect(sendStub.calledWith("+1234567890", "Hello world!"));
+          expect(sendStub.calledWith("+2234567890", "Hello world!"));
+          expect(sendStub.calledWith("+3234567890", "Hello world!"));
+          res();
+        }, 100);
+      });
     });
 
     it("should call EntityModel.setDefaultMessage when message is SET MESSAGE and setting exists", async () => {
@@ -550,10 +560,15 @@ describe("decipherMessage", () => {
 
       expect(findAllStub.calledOnceWithExactly({entityId: "00001", campaignCode: "LOC1"}));
       expect(getMessageStub.calledOnceWithExactly("00001", "MSG1"));
-      expect(sendStub.callCount).to.equal(3);
-      expect(sendStub.calledWith("+1234567890", "This is message 1"));
-      expect(sendStub.calledWith("+2234567890", "This is message 1"));
-      expect(sendStub.calledWith("+3234567890", "This is message 1"));
+      await new Promise<void>((res) => {
+        setTimeout(() => {
+          expect(sendStub.callCount).to.equal(3);
+          expect(sendStub.calledWith("+1234567890", "This is message 1"));
+          expect(sendStub.calledWith("+2234567890", "This is message 1"));
+          expect(sendStub.calledWith("+3234567890", "This is message 1"));
+          res();
+        }, 100);
+      });
     });
 
     it("should send message back to admin when message is not recognized", async () => {
