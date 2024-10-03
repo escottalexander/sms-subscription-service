@@ -379,7 +379,7 @@ describe("Core Logic", () => {
     };
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
-
+    await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
     const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
     expect(lastCode).to.equal("TEST1");
 
@@ -390,7 +390,7 @@ describe("Core Logic", () => {
     };
     const response2 = buildResponse();
     await messageHandler.handle(buildRequest(message2), response2);
-
+    await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
     const lastCode2 = await messageHandler.models.entity.getLastCode(entityId as string);
     expect(lastCode2).to.equal("TEST2");
   });

@@ -6,7 +6,7 @@ import connect from "../src/services/mongodb.js";
 import MessageHandler from "../src/server/messageHandler.js";
 import messenger from "../src/services/messenger.js";
 import { Entity } from "../src/model/entities.js";
-import { Request, response } from "express";
+import { Request } from "express";
 import { Document } from "mongodb";
 import { mockRequest, mockResponse } from "mock-req-res";
 
@@ -170,6 +170,8 @@ describe("Reporting Tests", function () {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 24);
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     const reportArr = await messageHandler.models.reporting.findByDateRange({
       entityId: entityId as string,
       startDate,
@@ -250,6 +252,7 @@ describe("Reporting Tests", function () {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 48);
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const reportArr = await messageHandler.models.reporting.findByDateRange({
       entityId: entityId as string,
       startDate,
@@ -311,6 +314,7 @@ describe("Reporting Tests", function () {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 48);
 
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const reportArr: Document[] = await messageHandler.models.reporting.aggregateByDateRange({
       entityId: entityId as string,
       startDate,
