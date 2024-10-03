@@ -1,13 +1,15 @@
-import express, { Express} from "express";
+import express, { Express } from "express";
 import * as bodyParser from "body-parser";
 import connect from "../services/mongodb.js";
 import MessageHandler from "./messageHandler.js";
 import logger from "../services/logger.js";
+import StatusCallbackHandler from "./statusCallbackHandler.js";
 
 class Server {
   app: Express;
   port: number;
   messageHandler: MessageHandler;
+  statusCallbackHandler: StatusCallbackHandler;
 
   constructor(port: number) {
     this.app = express();
@@ -19,6 +21,7 @@ class Server {
     try {
       const storage = await connect();
       this.messageHandler = new MessageHandler(storage);
+      this.statusCallbackHandler = new StatusCallbackHandler(storage);
       this.startServer();
     } catch (err: any) {
       logger.error(JSON.stringify(err.message));
@@ -27,10 +30,10 @@ class Server {
 
   async startServer() {
     // Set up body-parser middleware to parse incoming request bodies
-     this.app.use(bodyParser.json());
-     this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(bodyParser.json());
+    this.app.use(express.urlencoded({ extended: true }));
 
-     this.app.post("/webhook", async (req, res) => {
+    this.app.post("/webhook", async (req, res) => {
       try {
         await this.messageHandler.handle(req, res);
       } catch (err: any) {
@@ -39,12 +42,22 @@ class Server {
       }
     });
 
-     this.app.get("/status", async (req, res) => {
+    this.app.post("/status-callback/:entityId", async (req, res) => {
+      try {
+        await this.statusCallbackHandler.handle(req);
+        res.sendStatus(200);
+      } catch (err: any) {
+        logger.error(JSON.stringify(err.message));
+        res.sendStatus(500);
+      }
+    });
+
+    this.app.get("/status", async (req, res) => {
       res.sendStatus(200);
     });
 
     // Start the server
-     this.app.listen(this.port, () => console.log(`Server started on port ${this.port}`));
+    this.app.listen(this.port, () => console.log(`Server started on port ${this.port}`));
   }
 
 }

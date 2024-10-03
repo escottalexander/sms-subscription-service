@@ -204,8 +204,8 @@ describe("Core Logic", () => {
     expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "1")))).to.be.true;
     await new Promise<void>((res) => {
       setTimeout(() => {
-        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
-        expect(!sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!", entityId)).to.be.true;
+        expect(!sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!", entityId)).to.be.true;
         res();
       }, 100); // Wait for the message to send since it's async
     });
@@ -223,8 +223,8 @@ describe("Core Logic", () => {
     expect(response.send.calledOnceWith(twimlResponse(responses.CUSTOM_MESSAGE.replace("%COUNT%", "2")))).to.be.true;
     await new Promise<void>((res) => {
       setTimeout(() => {
-        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!")).to.be.true;
-        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!")).to.be.true;
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, normalUser.phoneNumber, "Hello world!", entityId)).to.be.true;
+        expect(sendStub.calledWithExactly(entity?.accountPhoneNumber, admin.phoneNumber, "Hello world!", entityId)).to.be.true;
         res();
       }, 100); // Wait for the message to send since it's async
     });

@@ -3,7 +3,6 @@ import * as chai from "chai";
 const expect = chai.expect;
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/example.env" });
-const { support_number_numan_readable } = process.env;
 
 import MessageHandler from "../src/server/messageHandler.js";
 import { Entity, EntityModel } from "../src/model/entities.js";
