@@ -300,13 +300,21 @@ class MessageHandler {
 
   async sendBulkMessages(entityPhone: string, entityId: string, campaignCode: string, subscribers: WithId<PhoneNumber>[], message: string) {
     const reportingOps = [];
+    const phoneNumberOps = [];
     for (let sub of subscribers) {
       const { success } = await messenger.send(entityPhone, sub.phoneNumber, message, entityId);
       const segments: number = getSegments(message);
       reportingOps.push(this.models.reporting.incrementCountOp({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments }));
+      // If the message failed immediately, increment the failed count because we wont receive a status callback
+      if (!success) {
+        phoneNumberOps.push(this.models.phoneNumber.incrementSendCountOp({ entityId, phoneNumber: sub.phoneNumber, success }));
+      }
     }
     this.models.entity.setLastCode(entityId, campaignCode);
     this.models.reporting.collection.bulkWrite(reportingOps);
+    if (phoneNumberOps.length) {
+      this.models.phoneNumber.collection.bulkWrite(phoneNumberOps);
+    }
   }
 
   async setDefaultMessage(entityId: string, message: string) {
