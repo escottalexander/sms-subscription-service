@@ -8,7 +8,7 @@ export interface MessengerResponse {
 }
 
 const messenger = {
-  send: async (fromNumber: string, toNumber: string, message: string) => {
+  send: async (fromNumber: string, toNumber: string, message: string, entityId: string) => {
     if (isTest) {
       return { success: true, error: null };
     }
@@ -18,6 +18,7 @@ const messenger = {
           body: message,
           from: fromNumber,
           to: toNumber,
+          statusCallback: `${process.env.statusCallbackUrl}/status-callback/${entityId}`,
         });
       if (response && response.errorCode) {
         logger.error("Received error from Twilio: " + response.errorMessage);

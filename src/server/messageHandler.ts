@@ -299,16 +299,13 @@ class MessageHandler {
   };
 
   async sendBulkMessages(entityPhone: string, entityId: string, campaignCode: string, subscribers: WithId<PhoneNumber>[], message: string) {
-    const phoneNumberOps = [];
     const reportingOps = [];
     for (let sub of subscribers) {
-      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message);
+      const { success } = await messenger.send(entityPhone, sub.phoneNumber, message, entityId);
       const segments: number = getSegments(message);
-      phoneNumberOps.push(this.models.phoneNumber.incrementSendCountOp({ entityId, phoneNumber: sub.phoneNumber, success }));
       reportingOps.push(this.models.reporting.incrementCountOp({ entityId, campaignCode, fieldName: success ? "sentCount" : "failedCount", segments }));
     }
     this.models.entity.setLastCode(entityId, campaignCode);
-    this.models.phoneNumber.collection.bulkWrite(phoneNumberOps);
     this.models.reporting.collection.bulkWrite(reportingOps);
   }
 
