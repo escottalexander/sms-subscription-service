@@ -216,10 +216,11 @@ class MessageHandler {
           } else if (
             strCmd[0] === "GET" &&
             strCmd[1] === "LAST" &&
-            strCmd[2] === "CODE"
+            (strCmd[2] === "CODES" || strCmd[2] === "CODE") // Grandfather in old command
           ) {
-            const lastCode = await this.getLastCode(entityId);
-            return lastCode;
+            const count = strCmd[3] ? parseInt(strCmd[3]) : 5;
+            const lastCodes = await this.getLastSentCampaigns(entityId, count);
+            return lastCodes;
           }
         } else if (message === "STATUS") {
           // Status check
@@ -310,7 +311,7 @@ class MessageHandler {
         phoneNumberOps.push(this.models.phoneNumber.incrementSendCountOp({ entityId, phoneNumber: sub.phoneNumber, success }));
       }
     }
-    this.models.entity.setLastCode(entityId, campaignCode);
+    this.models.entity.setLastSentCampaign(entityId, campaignCode);
     this.models.reporting.collection.bulkWrite(reportingOps);
     if (phoneNumberOps.length) {
       this.models.phoneNumber.collection.bulkWrite(phoneNumberOps);
@@ -355,11 +356,6 @@ class MessageHandler {
     const readableNames = names?.join(",\n");
     return readableNames;
   };
-
-  async getLastCode(entityId: string) {
-    const lastCode = await this.models.entity.getLastCode(entityId);
-    return lastCode;
-  }
 
   async addAdmin(entityId: string, newAdmin: string) {
     let phone: E164Number;
@@ -428,6 +424,44 @@ class MessageHandler {
   async shutDownProcess() {
     process.exit();
   };
+
+  async getLastSentCampaigns(entityId: string, count: number = 5) {
+    const campaigns = await this.models.entity.getLastSentCampaigns(entityId);
+
+    // Create array of campaign codes sorted by date
+    const campaignsArray = [];
+    for (let code in campaigns) {
+      campaignsArray.push({ code, date: campaigns[code] });
+    }
+
+    if (!campaignsArray.length) {
+      return responses.NO_CAMPAIGNS_SENT;
+    }
+
+    const quantity = count > campaignsArray.length ? campaignsArray.length : count;
+    const sortedCampaigns = campaignsArray.sort((a, b) => b.date - a.date).slice(0, quantity);
+
+    const formattedCampaigns = [];
+    const now = new Date();
+    for (let entry of sortedCampaigns) {
+      const code = entry.code;
+      const campaignDate = entry.date;
+      const hoursAgo = Math.floor((now.getTime() - campaignDate.getTime()) / (1000 * 60 * 60));
+      const minutesAgo = Math.floor(((now.getTime() - campaignDate.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
+      let timeString: string;
+      if (hoursAgo === 0 && minutesAgo === 0) {
+        timeString = `just now`;
+      } else if (hoursAgo === 0) {
+        timeString = `${minutesAgo}m ago`;
+      } else if (hoursAgo < 24) {
+        timeString = `${hoursAgo}h${minutesAgo ? `, ${minutesAgo}m` : ""} ago`;
+      } else {
+        timeString = `${Math.floor(hoursAgo / 24)}d${hoursAgo % 24 ? `, ${hoursAgo % 24}h` : ""} ago`;
+      }
+      formattedCampaigns.push(`${code} ${timeString}`);
+    }
+    return `${formattedCampaigns.join("\n")}`;
+  }
 };
 
 export default MessageHandler;
