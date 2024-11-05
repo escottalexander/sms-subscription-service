@@ -3,7 +3,6 @@ import logger from "../services/logger.js";
 import parsePhoneNumberFromString, { E164Number } from "libphonenumber-js";
 import responses from "./responses.js";
 import { Entity, EntityModel } from "../model/entities.js";
-import { StateModel } from "../model/state.js";
 import { PhoneNumber, PhoneNumberModel } from "../model/phoneNumbers.js";
 import { ReportingModel } from "../model/reporting.js";
 import { Db, WithId } from "mongodb";
@@ -18,14 +17,12 @@ class MessageHandler {
     entity: EntityModel,
     phoneNumber: PhoneNumberModel,
     reporting: ReportingModel,
-    state: StateModel,
   };
   constructor(storage: Db) {
     this.models = {
       entity: new EntityModel(storage),
       phoneNumber: new PhoneNumberModel(storage),
       reporting: new ReportingModel(storage),
-      state: new StateModel(storage),
     }
   }
   async handle(req: Request<{}, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>, number>) {

@@ -203,7 +203,7 @@ describe("decipherMessage", () => {
     });
 
     it("should call changeCampaignCode when message is CHANGE CODE", async () => {
-      const stateStub = sinon.stub(EntityModel.prototype, "updateCampaignCode");
+      const updateCampaignCodeStub = sinon.stub(EntityModel.prototype, "updateCampaignCode");
       const phoneNumberStub = sinon.stub(
         PhoneNumberModel.prototype,
         "updateCampaignCode"
@@ -221,7 +221,7 @@ describe("decipherMessage", () => {
 
       const response = await messageHandler.decipherMessage(reqCtx, req);
 
-      expect(stateStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
+      expect(updateCampaignCodeStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
       expect(phoneNumberStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
       expect(response).to.equal("Successfully changed code 'TEST1' to 'TEST2'");
     });

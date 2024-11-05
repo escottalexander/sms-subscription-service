@@ -33,7 +33,7 @@ const twimlResponse = (message: string) => {
 async function init() {
   const db = await connect();
   messageHandler = new MessageHandler(db);
-  const dbs = ["phone-numbers", "reporting-daily", "entities", "state"];
+  const dbs = ["phone-numbers", "reporting-daily", "entities"];
   for (const dbName of dbs) {
     try {
       await db.collection(dbName).drop();

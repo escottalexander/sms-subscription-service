@@ -46,7 +46,6 @@ async function init() {
     messageHandler = new MessageHandler(db);
     await db.collection("phone-numbers").drop();
     await db.collection("reporting-daily").drop();
-    await db.collection("state").drop();
     await db.collection("entities").drop();
   } catch (err) {
     console.log("No collections were dropped because they don't exist");
@@ -252,7 +251,7 @@ describe("Reporting Tests", function () {
     const endDate = new Date();
     endDate.setHours(endDate.getHours() + 48);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setImmediate(resolve));
     const reportArr = await messageHandler.models.reporting.findByDateRange({
       entityId: entityId as string,
       startDate,
