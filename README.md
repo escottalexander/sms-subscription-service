@@ -20,7 +20,7 @@ For admin users, they can use these commands in addition:
 - `REMOVE CODE %CODE%` - To remove a campaign code and unsubscribe all subscribers with that code. Consider using `CHANGE CODE` as it migrates users without them having to sign up for a new code.
 - `SET MESSAGE %MESSAGE%` - Set the default message that is sent to subscribers.
 - `GET MESSAGE` - Get the default message.
-- `GET LAST CODE` - To view the last subscription code used to send messages.
+- `GET LAST CODES` - To view the last 5 codes that were sent out. You can also add a number to the end to show more than 5.
 - `STATUS` - To check the status of the process. Should return RUNNING if all is well.
 - `SHUTDOWN` - To shut down the process. 
 
@@ -37,7 +37,7 @@ For admin users, they can use these commands in addition:
 You will need:
 - MongoDB
 - Twilio account
-- Somewhere to host the project and expose the endpoints Twilio uses
+- Somewhere to host the project and expose the endpoint used by Twilio
 
 Steps:
-Copy the `exampe.env` file and rename to `.env`. Adjust the settings in that file to match your Twilio account information, your Mongo connection URI, and your database name. You will probably want to update the default messages set up in `src/server/responses.ts` to match your use case. Deploy the project to a server and run. Point Twilio to use your webhook endpoint when it recieves a SMS message to your Twilio phone number. That is all! Now you can manage the server and messaging through SMS using the commands above.
+Copy the `exampe.env` file and rename to `.env`. Adjust the settings in that file to match your Twilio account information, your Mongo connection URI, and your database name. You will probably want to update the default messages set up in `src/server/responses.ts` to match your use case. Deploy the project to a server and run. Point Twilio to use your webhook endpoint when it receives a SMS message to your Twilio phone number. That is all! Now you can manage the server and messaging through SMS using the commands above.

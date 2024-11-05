@@ -203,7 +203,7 @@ describe("decipherMessage", () => {
     });
 
     it("should call changeCampaignCode when message is CHANGE CODE", async () => {
-      const stateStub = sinon.stub(EntityModel.prototype, "updateCampaignCode");
+      const updateCampaignCodeStub = sinon.stub(EntityModel.prototype, "updateCampaignCode");
       const phoneNumberStub = sinon.stub(
         PhoneNumberModel.prototype,
         "updateCampaignCode"
@@ -221,7 +221,7 @@ describe("decipherMessage", () => {
 
       const response = await messageHandler.decipherMessage(reqCtx, req);
 
-      expect(stateStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
+      expect(updateCampaignCodeStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
       expect(phoneNumberStub.calledOnceWithExactly("00001", "TEST1", "TEST2"));
       expect(response).to.equal("Successfully changed code 'TEST1' to 'TEST2'");
     });
@@ -349,8 +349,10 @@ describe("decipherMessage", () => {
     });
 
     it("should call EntityModel.getLastCode when message is GET LAST CODE", async () => {
-      const getLastCodeStub = sinon.stub(EntityModel.prototype, "getLastCode");
-      getLastCodeStub.resolves("CODE");
+      const getLastCodeStub = sinon.stub(EntityModel.prototype, "getLastSentCampaigns");
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const oneHourAgoFiveMinutes = new Date(Date.now() - 1 * 60 * 60 * 1000 - 5 * 60 * 1000);
+      getLastCodeStub.resolves({ CODE: twoHoursAgo, CODE2: oneHourAgoFiveMinutes });
       const req = {
         Body: "GET LAST CODE",
         From: "+1234567890",
@@ -364,7 +366,7 @@ describe("decipherMessage", () => {
 
       const response = await messageHandler.decipherMessage(reqCtx, req);
 
-      expect(response).to.equal("CODE");
+      expect(response).to.equal("CODE2 1h, 5m ago\nCODE 2h ago");
       expect(
         getLastCodeStub.calledOnceWithExactly("00001")
       ).to.be.true;

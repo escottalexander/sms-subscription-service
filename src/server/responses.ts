@@ -25,6 +25,7 @@ const responses = {
   UNKNOWN_MSG_NAME: "We don't recognize that message name",
   UNKNOWN: "We don't recognize that code",
   ERROR: `Something went wrong with that request. Contact ${support_number_human_readable} for assistance`,
+  NO_CAMPAIGNS_SENT: "No campaigns have been sent yet.",
 };
 
 export default responses;

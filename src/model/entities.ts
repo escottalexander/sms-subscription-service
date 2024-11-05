@@ -9,7 +9,7 @@ class Entity implements Document {
   name: string;
   contactName: string;
   contactNumber: string;
-  lastCode: string;
+  lastSentCampaigns: { [key: string]: Date };
   messages: { [key: string]: string };
 }
 
@@ -96,20 +96,6 @@ class EntityModel {
     );
   };
 
-  async getLastCode(entityId: string) {
-    const entity = await this.collection
-      .findOne({ entityId });
-    return entity.lastCode;
-  };
-
-  async setLastCode(entityId: string, code: string) {
-    return this.collection.updateOne(
-      { entityId },
-      { $set: { lastCode: code } },
-      { upsert: true }
-    );
-  };
-
   async getMessage(entityId: string, name: string) {
     const entity = await this.collection
       .findOne({ entityId });
@@ -130,6 +116,20 @@ class EntityModel {
       const messages = entity.messages || {};
       const names =  Object.keys(messages);
     return names;
+  };
+
+  async setLastSentCampaign(entityId: string, code: string) {
+    return this.collection.updateOne(
+      { entityId },
+      { $set: { [`lastSentCampaigns.${code}`]: new Date() } },
+      { upsert: true }
+    );
+  };
+
+  async getLastSentCampaigns(entityId: string) {
+    const entity = await this.collection
+      .findOne({ entityId });
+    return entity.lastSentCampaigns;
   };
 };
 

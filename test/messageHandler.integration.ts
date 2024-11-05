@@ -33,7 +33,7 @@ const twimlResponse = (message: string) => {
 async function init() {
   const db = await connect();
   messageHandler = new MessageHandler(db);
-  const dbs = ["phone-numbers", "reporting-daily", "entities", "state"];
+  const dbs = ["phone-numbers", "reporting-daily", "entities"];
   for (const dbName of dbs) {
     try {
       await db.collection(dbName).drop();
@@ -371,7 +371,7 @@ describe("Core Logic", () => {
     });
   });
 
-  it("should set an entity's last code when an admin sends a campaign", async () => {
+  it("should set a campaigns sent date when an admin sends a campaign", async () => {
     const message = {
       Body: "SEND TEST1",
       From: admin.phoneNumber,
@@ -380,8 +380,9 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
     await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
-    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
-    expect(lastCode).to.equal("TEST1");
+    const lastCode = await messageHandler.models.entity.getLastSentCampaigns(entityId as string);
+    expect(lastCode.TEST1).to.exist;
+    expect(lastCode.TEST1).to.be.instanceOf(Date);
 
     const message2 = {
       Body: "SEND TEST2",
@@ -391,8 +392,9 @@ describe("Core Logic", () => {
     const response2 = buildResponse();
     await messageHandler.handle(buildRequest(message2), response2);
     await new Promise<void>((res) => setImmediate(res)); // Wait for the message to send since it's async
-    const lastCode2 = await messageHandler.models.entity.getLastCode(entityId as string);
-    expect(lastCode2).to.equal("TEST2");
+    const lastCode2 = await messageHandler.models.entity.getLastSentCampaigns(entityId as string);
+    expect(lastCode2.TEST2).to.exist;
+    expect(lastCode2.TEST2).to.be.instanceOf(Date);
   });
 
   it("should get an entity's last code when called by an admin with GET LAST CODE", async () => {
@@ -404,8 +406,8 @@ describe("Core Logic", () => {
     const response = buildResponse();
     await messageHandler.handle(buildRequest(message), response);
 
-    const lastCode = await messageHandler.models.entity.getLastCode(entityId as string);
-    expect(response.send.calledOnceWith(twimlResponse(lastCode))).to.be.true;
+    const responseString = await messageHandler.getLastSentCampaigns(entityId as string);
+    expect(response.send.calledOnceWith(twimlResponse(responseString))).to.be.true;
   });
 
   it("should add an admin as a subscriber when they send a code", async () => {
